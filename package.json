@@ -14,5 +14,9 @@
     "electron": "^4.0.4",
     "eslint": "^5.13.0",
     "nodemon": "^1.18.9"
+  },
+  "dependencies": {
+    "dataurl": "^0.1.0",
+    "lodash": "^4.17.11"
   }
 }
