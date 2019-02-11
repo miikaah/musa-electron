@@ -1,9 +1,26 @@
 // Modules to control application life and create native browser window
+"use strict";
+
 const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
 const fs = require("fs");
-const { negate, startsWith } = require("lodash");
+const { negate, startsWith, isEmpty, camelCase, mapKeys } = require("lodash");
 const dataUrl = require("dataurl");
+const readTags = require("read-audio-tags");
+const ffprobeStatic = require("ffprobe-static");
+const Bottleneck = require("bottleneck");
+const Datastore = require("nedb");
+
+const LIBRARY_PATH = "/Users/miika.henttonen/Documents/musat";
+const DB_FILENAME = "musa_db";
+const SUPPORTED_FILE_TYPES = new Set([".mp3", ".flac", ".ogg"]);
+
+const db = new Datastore({
+  filename: LIBRARY_PATH + "/" + DB_FILENAME,
+  autoload: true
+});
+
+const bottleneck = new Bottleneck({ maxConcurrent: 12 });
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -80,38 +97,80 @@ app.on("activate", function() {
 // code. You can also put them in separate files and require them here.
 
 ipcMain.on("getLibraryListing", event => {
-  const path = "/Users/miika.henttonen/Documents/musat";
-  fs.readdir(path, { withFileTypes: true }, (err, files) => {
+  fs.readdir(LIBRARY_PATH, { withFileTypes: true }, (err, files) => {
     if (err) {
       console.error(err);
       return [];
     }
     const result = files.filter(negate(isHiddenFile));
-    const listing = buildLibraryListing(path, result);
-    event.sender.send("libraryListing", listing);
+    buildLibraryListing(LIBRARY_PATH, result, event);
   });
 });
 
-const isHiddenFile = f => startsWith(f.name, ".");
+const isHiddenFile = file => startsWith(file.name, ".");
 
-function buildLibraryListing(path, files) {
+function buildLibraryListing(path, files, event) {
   if (files.length < 1) return [];
-  const listing = [];
-  files.forEach(f => doFolderRecursion(f, listing, path));
-  return listing;
+  files.forEach(async file => {
+    const doc = await dbFindOne(file);
+    if (doc) {
+      event.sender.send("libraryListing", doc);
+      return;
+    }
+    const listing = await bottleneck.schedule(() =>
+      getDirStructureForSubDir(file, path)
+    );
+    if (listing) {
+      db.insert(listing);
+      event.sender.send("libraryListing", listing);
+    }
+  });
 }
 
-function doFolderRecursion(f, listing, path) {
+async function dbFindOne(file) {
+  return new Promise((resolve, reject) => {
+    db.findOne({ name: file.name }, (err, doc) => {
+      if (err) return reject(err);
+      resolve(doc);
+    });
+  });
+}
+
+async function getDirStructureForSubDir(f, path) {
   const childPath = `${path}/${f.name}`;
   const fileOrFolder = { name: f.name, path: childPath };
+
   if (f.isDirectory()) {
     const files = fs.readdirSync(childPath, { withFileTypes: true });
-    fileOrFolder.children = buildLibraryListing(
-      childPath,
-      files.filter(negate(isHiddenFile))
+    const children = await Promise.all(
+      files.filter(negate(isHiddenFile)).map(file => {
+        return getDirStructureForSubDir(file, childPath, fileOrFolder);
+      })
     );
+    fileOrFolder.children = children.filter(negate(isEmpty));
+  } else {
+    if (!isFileTypeSupported(childPath)) return;
+    fileOrFolder.metadata = await getSongMetadata(childPath);
   }
-  listing.push(fileOrFolder);
+  return fileOrFolder;
+}
+
+function isFileTypeSupported(filepath) {
+  return SUPPORTED_FILE_TYPES.has(path.extname(filepath));
+}
+
+async function getSongMetadata(path) {
+  return new Promise((resolve, reject) => {
+    if (isEmpty(path) || !isFileTypeSupported(path)) return resolve();
+    readTags(path, ffprobeStatic.path, (err, tags) => {
+      if (err) return reject(err);
+      resolve(getSafeTagFieldNames(tags));
+    });
+  });
+}
+
+function getSafeTagFieldNames(tags) {
+  return mapKeys(tags, (v, key) => camelCase(key.replace(" ", "_")));
 }
 
 ipcMain.on("getSongAsDataUrl", (event, path = "") => {
@@ -126,4 +185,9 @@ ipcMain.on("getSongAsDataUrl", (event, path = "") => {
       dataUrl.convert({ data, mimetype: "audio/mp3" })
     );
   });
+});
+
+ipcMain.on("getSongMetadata", async (event, path) => {
+  const metadata = await getSongMetadata(path);
+  event.sender.send("songMetadata", metadata);
 });

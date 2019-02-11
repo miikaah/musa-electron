@@ -35,7 +35,11 @@
     "prettier": "^1.16.4"
   },
   "dependencies": {
+    "bottleneck": "^2.16.2",
     "dataurl": "^0.1.0",
-    "lodash": "^4.17.11"
+    "ffprobe-static": "^3.0.0",
+    "lodash": "^4.17.11",
+    "nedb": "^1.8.0",
+    "read-audio-tags": "^0.1.1"
   }
 }
