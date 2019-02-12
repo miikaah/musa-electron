@@ -4,16 +4,15 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
 const fs = require("fs");
-const { negate, startsWith, isEmpty, camelCase, mapKeys } = require("lodash");
+const { negate, startsWith, isEmpty } = require("lodash");
 const dataUrl = require("dataurl");
-const readTags = require("read-audio-tags");
-const ffprobeStatic = require("ffprobe-static");
+const { getSongMetadata } = require("./metadata");
+const { isFileTypeSupported } = require("./util");
 const Bottleneck = require("bottleneck");
 const Datastore = require("nedb");
 
 const LIBRARY_PATH = "/Users/miika.henttonen/Documents/musat";
 const DB_FILENAME = "musa_db";
-const SUPPORTED_FILE_TYPES = new Set([".mp3", ".flac", ".ogg"]);
 
 const db = new Datastore({
   filename: LIBRARY_PATH + "/" + DB_FILENAME,
@@ -111,12 +110,12 @@ const isHiddenFile = file => startsWith(file.name, ".");
 
 function buildLibraryListing(path, files, event) {
   if (files.length < 1) return [];
-  files.forEach(async file => {
-    const doc = await dbFindOne(file);
-    if (doc) {
-      event.sender.send("libraryListing", doc);
-      return;
-    }
+  files.splice(0, 1).forEach(async file => {
+    // const doc = await dbFindOne(file);
+    // if (doc) {
+    //   event.sender.send("libraryListing", doc);
+    //   return;
+    // }
     const listing = await bottleneck.schedule(() =>
       getDirStructureForSubDir(file, path)
     );
@@ -127,14 +126,14 @@ function buildLibraryListing(path, files, event) {
   });
 }
 
-async function dbFindOne(file) {
-  return new Promise((resolve, reject) => {
-    db.findOne({ name: file.name }, (err, doc) => {
-      if (err) return reject(err);
-      resolve(doc);
-    });
-  });
-}
+// async function dbFindOne(file) {
+//   return new Promise((resolve, reject) => {
+//     db.findOne({ name: file.name }, (err, doc) => {
+//       if (err) return reject(err);
+//       resolve(doc);
+//     });
+//   });
+// }
 
 async function getDirStructureForSubDir(f, path) {
   const childPath = `${path}/${f.name}`;
@@ -155,24 +154,6 @@ async function getDirStructureForSubDir(f, path) {
   return fileOrFolder;
 }
 
-function isFileTypeSupported(filepath) {
-  return SUPPORTED_FILE_TYPES.has(path.extname(filepath));
-}
-
-async function getSongMetadata(path) {
-  return new Promise((resolve, reject) => {
-    if (isEmpty(path) || !isFileTypeSupported(path)) return resolve();
-    readTags(path, ffprobeStatic.path, (err, tags) => {
-      if (err) return reject(err);
-      resolve(getSafeTagFieldNames(tags));
-    });
-  });
-}
-
-function getSafeTagFieldNames(tags) {
-  return mapKeys(tags, (v, key) => camelCase(key.replace(" ", "_")));
-}
-
 ipcMain.on("getSongAsDataUrl", (event, path = "") => {
   if (path.length < 1) return;
   fs.readFile(path, (err, data) => {
@@ -185,9 +166,4 @@ ipcMain.on("getSongAsDataUrl", (event, path = "") => {
       dataUrl.convert({ data, mimetype: "audio/mp3" })
     );
   });
-});
-
-ipcMain.on("getSongMetadata", async (event, path) => {
-  const metadata = await getSongMetadata(path);
-  event.sender.send("songMetadata", metadata);
 });
