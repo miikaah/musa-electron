@@ -53,7 +53,7 @@ function createWindow() {
   mainWindow.loadURL(
     process.env.IS_DEV
       ? "http://localhost:3000"
-      : `file://${path.join(__dirname, "/build/index.html")}`
+      : `file://${path.join(__dirname, "../build/index.html")}`
   );
 
   if (process.env.IS_DEV) mainWindow.webContents.openDevTools();
