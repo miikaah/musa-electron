@@ -51,12 +51,12 @@ function getTrackAndTotalTracks(tags) {
   if (disc) {
     const discParts = `${disc}`.split("/");
     return {
-      track: `${discParts[0]}.${prefixNumber(trackParts[0])}`,
+      track: `${discParts[0]}.${prefixNumber(parseInt(trackParts[0], 10))}`,
       totalTracks: trackParts[1]
     };
   }
   return {
-    track: prefixNumber(trackParts[0]),
+    track: prefixNumber(parseInt(trackParts[0], 10)),
     totalTracks: trackParts[1]
   };
 }

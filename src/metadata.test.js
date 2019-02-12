@@ -29,6 +29,10 @@ describe("metadata", () => {
       totalTracks: undefined,
       track: "01"
     });
+    expect(getTrackAndTotalTracks({ track: "01" })).toEqual({
+      totalTracks: undefined,
+      track: "01"
+    });
     expect(getTrackAndTotalTracks({ track: "1/9" })).toEqual({
       totalTracks: "9",
       track: "01"
