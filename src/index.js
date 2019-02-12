@@ -110,12 +110,12 @@ const isHiddenFile = file => startsWith(file.name, ".");
 
 function buildLibraryListing(path, files, event) {
   if (files.length < 1) return [];
-  files.splice(0, 1).forEach(async file => {
-    // const doc = await dbFindOne(file);
-    // if (doc) {
-    //   event.sender.send("libraryListing", doc);
-    //   return;
-    // }
+  files.forEach(async file => {
+    const doc = await dbFindOne(file);
+    if (doc) {
+      event.sender.send("libraryListing", doc);
+      return;
+    }
     const listing = await bottleneck.schedule(() =>
       getDirStructureForSubDir(file, path)
     );
@@ -126,14 +126,14 @@ function buildLibraryListing(path, files, event) {
   });
 }
 
-// async function dbFindOne(file) {
-//   return new Promise((resolve, reject) => {
-//     db.findOne({ name: file.name }, (err, doc) => {
-//       if (err) return reject(err);
-//       resolve(doc);
-//     });
-//   });
-// }
+async function dbFindOne(file) {
+  return new Promise((resolve, reject) => {
+    db.findOne({ name: file.name }, (err, doc) => {
+      if (err) return reject(err);
+      resolve(doc);
+    });
+  });
+}
 
 async function getDirStructureForSubDir(f, path) {
   const childPath = `${path}/${f.name}`;
@@ -149,7 +149,13 @@ async function getDirStructureForSubDir(f, path) {
     fileOrFolder.children = children.filter(negate(isEmpty));
   } else {
     if (!isFileTypeSupported(childPath)) return;
-    fileOrFolder.metadata = await getSongMetadata(childPath);
+    let metadata;
+    try {
+      metadata = await getSongMetadata(childPath);
+    } catch (e) {
+      console.error(e);
+    }
+    fileOrFolder.metadata = metadata;
   }
   return fileOrFolder;
 }

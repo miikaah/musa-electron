@@ -1,4 +1,4 @@
-const { isEmpty, camelCase, mapKeys } = require("lodash");
+const { isEmpty, camelCase, mapKeys, isString } = require("lodash");
 const { isFileTypeSupported } = require("./util");
 const { ffprobe } = require("./ffprobe");
 const ffprobeStatic = require("ffprobe-static");
@@ -12,10 +12,13 @@ async function getSongMetadata(path) {
       ffprobeStatic.path,
       (err, tags) => {
         if (err) return reject(err);
+        const { track, totalTracks } = getTrackAndTotalTracks(tags.format.tags);
         resolve(
           getSafeTagFieldNames({
             ...tags.format.tags,
-            duration: formatDuration(tags.format.duration)
+            duration: formatDuration(tags.format.duration),
+            track,
+            totalTracks
           })
         );
       }
@@ -40,11 +43,30 @@ function prefixNumber(value) {
   return value < 10 ? `0${value}` : `${value}`;
 }
 
+function getTrackAndTotalTracks(tags) {
+  if (isEmpty(tags)) return { track: undefined, totalTracks: undefined };
+  const { track, disc } = tags;
+  if (!track) return { track: undefined, totalTracks: undefined };
+  const trackParts = `${track}`.split("/");
+  if (disc) {
+    const discParts = `${disc}`.split("/");
+    return {
+      track: `${discParts[0]}.${prefixNumber(trackParts[0])}`,
+      totalTracks: trackParts[1]
+    };
+  }
+  return {
+    track: prefixNumber(trackParts[0]),
+    totalTracks: trackParts[1]
+  };
+}
+
 function getSafeTagFieldNames(tags) {
   return mapKeys(tags, (v, key) => camelCase(key.replace(" ", "_")));
 }
 
 module.exports = {
   getSongMetadata,
-  formatDuration
+  formatDuration,
+  getTrackAndTotalTracks
 };

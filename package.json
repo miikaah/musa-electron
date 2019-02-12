@@ -5,7 +5,7 @@
   "description": "",
   "main": "src/index.js",
   "scripts": {
-    "start": "nodemon --watch ./src/index.js --exec IS_DEV=true electron .",
+    "start": "nodemon --watch ./src --exec IS_DEV=true electron .",
     "test": "jest --coverage",
     "test:w": "jest --coverage --watch",
     "package:mac": "electron-packager . --overwrite --platform=darwin --arch=x64 --prune=true --out=release-builds",

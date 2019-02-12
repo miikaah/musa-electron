@@ -14,10 +14,12 @@ module.exports = {
 
       try {
         const tags = JSON.parse(stdout);
-        if (!tags) return cb(new Error("ffprobe returned invalid data"));
+        if (!tags) {
+          return cb(new Error(`ffprobe returned invalid data: ${stdout}`));
+        }
         cb(null, tags);
       } catch (err) {
-        cb(new Error("ffprobe returned invalid JSON"));
+        cb(new Error(`ffprobe returned invalid JSON: ${err} : ${stdout}`));
       }
     });
   }
