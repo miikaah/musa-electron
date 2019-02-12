@@ -1,4 +1,4 @@
-const { isEmpty, camelCase, mapKeys, isString } = require("lodash");
+const { isEmpty, camelCase, mapKeys } = require("lodash");
 const { isFileTypeSupported } = require("./util");
 const { ffprobe } = require("./ffprobe");
 const ffprobeStatic = require("ffprobe-static");
