@@ -27,12 +27,13 @@ async function getSongMetadata(path) {
 }
 
 function formatDuration(duration) {
+  if (duration < 1) return "0:00";
   let output = "";
   if (duration >= 3600) {
     output += prefixNumber(Math.floor(duration / 3600)) + ":";
-  }
-  if (Math.floor(duration) % 3600 === 0) output += "00:";
-  else output += Math.floor((Math.floor(duration) % 3600) / 60) + ":";
+    output +=
+      prefixNumber(Math.floor((Math.floor(duration) % 3600) / 60)) + ":";
+  } else output += Math.floor((Math.floor(duration) % 3600) / 60) + ":";
   output += prefixNumber(Math.floor(duration % 60));
   return output;
 }
