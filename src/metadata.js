@@ -32,9 +32,7 @@ function formatDuration(duration) {
     output += prefixNumber(Math.floor(duration / 3600)) + ":";
   }
   if (Math.floor(duration) % 3600 === 0) output += "00:";
-  else
-    output +=
-      prefixNumber(Math.floor((Math.floor(duration) % 3600) / 60)) + ":";
+  else output += Math.floor((Math.floor(duration) % 3600) / 60) + ":";
   output += prefixNumber(Math.floor(duration % 60));
   return output;
 }
