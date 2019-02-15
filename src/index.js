@@ -1,25 +1,9 @@
 // Modules to control application life and create native browser window
 "use strict";
 
-const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
-const fs = require("fs");
-const { negate, startsWith, isEmpty } = require("lodash");
-const dataUrl = require("dataurl");
-const { getSongMetadata } = require("./metadata");
-const { isFileTypeSupported } = require("./util");
-const Bottleneck = require("bottleneck");
-const Datastore = require("nedb");
-
-const LIBRARY_PATH = "/Users/miika.henttonen/Documents/musat";
-const DB_FILENAME = "musa_db";
-
-const db = new Datastore({
-  filename: LIBRARY_PATH + "/" + DB_FILENAME,
-  autoload: true
-});
-
-const bottleneck = new Bottleneck({ maxConcurrent: 12 });
+const { app, BrowserWindow, ipcMain } = require("electron");
+const { initLibrary, getLibraryListing } = require("./library");
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -45,7 +29,8 @@ function createWindow() {
     width: biggestDisplay.size.width,
     height: 1000,
     webPreferences: {
-      nodeIntegration: true
+      nodeIntegration: true,
+      webSecurity: false
     }
   });
 
@@ -68,6 +53,7 @@ function createWindow() {
     // when you should delete the corresponding element.
     mainWindow = null;
   });
+  initLibrary(mainWindow);
 }
 
 // This method will be called when Electron has finished
@@ -95,81 +81,4 @@ app.on("activate", function() {
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
 
-ipcMain.on("getLibraryListing", event => {
-  fs.readdir(LIBRARY_PATH, { withFileTypes: true }, (err, files) => {
-    if (err) {
-      console.error(err);
-      return [];
-    }
-    const result = files.filter(negate(isHiddenFile));
-    buildLibraryListing(LIBRARY_PATH, result, event);
-  });
-});
-
-const isHiddenFile = file => startsWith(file.name, ".");
-
-function buildLibraryListing(path, files, event) {
-  if (files.length < 1) return [];
-  files.forEach(async file => {
-    const doc = await dbFindOne(file);
-    if (doc) {
-      event.sender.send("libraryListing", doc);
-      return;
-    }
-    const listing = await bottleneck.schedule(() =>
-      getDirStructureForSubDir(file, path)
-    );
-    if (listing) {
-      db.insert(listing);
-      event.sender.send("libraryListing", listing);
-    }
-  });
-}
-
-async function dbFindOne(file) {
-  return new Promise((resolve, reject) => {
-    db.findOne({ name: file.name }, (err, doc) => {
-      if (err) return reject(err);
-      resolve(doc);
-    });
-  });
-}
-
-async function getDirStructureForSubDir(f, path) {
-  const childPath = `${path}/${f.name}`;
-  const fileOrFolder = { name: f.name, path: childPath };
-
-  if (f.isDirectory()) {
-    const files = fs.readdirSync(childPath, { withFileTypes: true });
-    const children = await Promise.all(
-      files.filter(negate(isHiddenFile)).map(file => {
-        return getDirStructureForSubDir(file, childPath, fileOrFolder);
-      })
-    );
-    fileOrFolder.children = children.filter(negate(isEmpty));
-  } else {
-    if (!isFileTypeSupported(childPath)) return;
-    let metadata;
-    try {
-      metadata = await getSongMetadata(childPath);
-    } catch (e) {
-      console.error(e);
-    }
-    fileOrFolder.metadata = metadata;
-  }
-  return fileOrFolder;
-}
-
-ipcMain.on("getSongAsDataUrl", (event, path = "") => {
-  if (path.length < 1) return;
-  fs.readFile(path, (err, data) => {
-    if (err) {
-      console.error(err);
-      return "";
-    }
-    event.sender.send(
-      "songAsDataUrl",
-      dataUrl.convert({ data, mimetype: "audio/mp3" })
-    );
-  });
-});
+ipcMain.on("getLibraryListing", getLibraryListing);
