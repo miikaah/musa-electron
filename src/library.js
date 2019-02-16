@@ -17,7 +17,10 @@ const LIBRARY_PATH = `${homedir}/Documents/musat`;
 
 const bottleneck = new Bottleneck({ maxConcurrent: 12 });
 
-function initLibrary(mainWindow) {
+let mainWindow;
+
+function initLibrary(_window) {
+  mainWindow = _window;
   // const watcher = chokidar.watch(LIBRARY_PATH, {
   //   ignored: /^\./,
   //   ignoreInitial: true
@@ -34,6 +37,7 @@ function getLibraryListing(event) {
   fs.readdir(LIBRARY_PATH, { withFileTypes: true }, (err, files) => {
     if (err) {
       console.error(err);
+      mainWindow.webContents.send("error", JSON.stringify(err));
       return [];
     }
     buildLibraryListing(
@@ -61,26 +65,31 @@ const isHiddenFile = file => startsWith(file.name, ".");
 
 function buildLibraryListing(path, files, sender) {
   if (files.length < 1) return [];
-  files.forEach(async (file, index) => {
-    const listing = await bottleneck.schedule(async () => {
-      const parent = {
-        name: file.name,
-        path: `${path}/${file.name}`,
-        songs: []
-      };
-      const listing = await getDirStructureForSubDir(file, path, parent);
-      listing.albums = await getAlbumsBySongs(
-        listing.songs.filter(song => isFileTypeSupported(song.path))
-      );
-      return listing;
+  try {
+    files.forEach(async (file, index) => {
+      const listing = await bottleneck.schedule(async () => {
+        const parent = {
+          name: file.name,
+          path: `${path}/${file.name}`,
+          songs: []
+        };
+        const listing = await getDirStructureForSubDir(file, path, parent);
+        listing.albums = await getAlbumsBySongs(
+          listing.songs.filter(song => isFileTypeSupported(song.path))
+        );
+        return listing;
+      });
+      if (listing) {
+        sender.send("libraryListing", omit(listing, ["songs"]));
+      }
+      if (index === files.length - 1) {
+        sender.send("libraryListingEnd");
+      }
     });
-    if (listing) {
-      sender.send("libraryListing", omit(listing, ["songs"]));
-    }
-    if (index === files.length - 1) {
-      sender.send("libraryListingEnd");
-    }
-  });
+  } catch (e) {
+    console.error(e);
+    mainWindow.webContents.send("error", JSON.stringify(e));
+  }
 }
 
 async function getDirStructureForSubDir(file, path, parent) {
@@ -135,6 +144,7 @@ async function getFileMetadata(path) {
     return getSongMetadata(path);
   } catch (e) {
     console.error(e);
+    mainWindow.webContents.send("error", JSON.stringify(e));
   }
 }
 

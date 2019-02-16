@@ -1,6 +1,7 @@
 const { isEmpty, camelCase, mapKeys } = require("lodash");
 const { isFileTypeSupported } = require("./util");
 const { ffprobe } = require("./ffprobe");
+const ffprobeStatic = require("ffprobe-static");
 
 async function getSongMetadata(path) {
   return new Promise((resolve, reject) => {
@@ -8,7 +9,7 @@ async function getSongMetadata(path) {
     ffprobe(
       path,
       ["-v", "error", "-print_format", "json", "-show_entries", "format"],
-      "ffprobe",
+      ffprobeStatic.path,
       (err, tags) => {
         if (err) return reject(err);
         const { track, totalTracks } = getTrackAndTotalTracks(tags.format.tags);

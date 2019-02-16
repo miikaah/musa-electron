@@ -40,6 +40,7 @@
     "any-shell-escape": "^0.1.1",
     "bottleneck": "^2.16.2",
     "chokidar": "^2.1.1",
+    "ffprobe-static": "^3.0.0",
     "lodash": "^4.17.11"
   }
 }
