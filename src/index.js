@@ -3,7 +3,7 @@
 
 const path = require("path");
 const { app, BrowserWindow, ipcMain } = require("electron");
-const { initLibrary, getLibraryListing } = require("./library");
+const { initLibrary } = require("./library");
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -53,7 +53,6 @@ function createWindow() {
     // when you should delete the corresponding element.
     mainWindow = null;
   });
-  initLibrary(mainWindow);
 }
 
 // This method will be called when Electron has finished
@@ -81,4 +80,4 @@ app.on("activate", function() {
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
 
-ipcMain.on("getLibraryListing", getLibraryListing);
+ipcMain.on("initLibrary", initLibrary);

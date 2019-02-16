@@ -1,181 +1,77 @@
-const fs = require("fs");
 const homedir = require("os").homedir();
-// const chokidar = require("chokidar");
-const {
-  negate,
-  startsWith,
-  defaultTo,
-  omit,
-  get,
-  isUndefined
-} = require("lodash");
-const { getSongMetadata } = require("./metadata");
+const chokidar = require("chokidar");
+const hash = require("object-hash");
+const { isEmpty, pick, isUndefined } = require("lodash");
 const { isFileTypeSupported } = require("./util");
-const Bottleneck = require("bottleneck");
+const { fork } = require("child_process");
 
 const LIBRARY_PATH = `${homedir}/Documents/musat`;
 
-const bottleneck = new Bottleneck({ maxConcurrent: 12 });
+function initLibrary(event, songList = []) {
+  if (isEmpty(songList)) runInitialScan(event);
+  const dirtySongList = [];
+  const dirtySongSet = new Set();
+  const frontendSongMap = new Map(songList);
+  let isInitialized = false;
 
-let mainWindow;
-
-function initLibrary(_window) {
-  mainWindow = _window;
-  // const watcher = chokidar.watch(LIBRARY_PATH, {
-  //   ignored: /^\./,
-  //   ignoreInitial: true
-  // });
-  // watcher.on("add", path => {
-  //   console.log("add", path);
-  //   updateLibraryListing(mainWindow, path);
-  // });
+  const watcher = chokidar.watch(LIBRARY_PATH, {
+    ignored: /^\./
+  });
+  watcher.on("add", (path, stats) => {
+    if (!isFileTypeSupported(path)) return;
+    const statsHash = hash(pick(stats, ["mtime", "ctime", "birthtime"]));
+    if (!isInitialized) {
+      const frontendHash = frontendSongMap.get(path);
+      if (statsHash !== frontendHash) {
+        console.log(path);
+        console.log(statsHash, frontendSongMap.get(path));
+        console.log(pick(stats, ["mtime", "ctime", "birthtime"]));
+        dirtySongList.push([path, statsHash]);
+        dirtySongSet.add(path);
+        return;
+      }
+      if (isUndefined(frontendHash)) {
+        console.log("New file found ", path);
+      }
+    }
+  });
+  watcher.on("ready", () => {
+    isInitialized = true;
+    console.log(dirtySongList.length, frontendSongMap.size);
+    updateDirtySongs(event, Array.from(dirtySongSet.values()));
+    event.sender.send(
+      "updateSongList",
+      [
+        ...songList.filter(song => !dirtySongSet.has(song[0])),
+        ...dirtySongList
+      ].sort((a, b) => a[0].localeCompare(b[0]))
+    );
+  });
   // watcher.on("change", path => console.log("change", path));
   // watcher.on("unlink", path => console.log("unlink", path));
 }
 
-function getLibraryListing(event) {
-  fs.readdir(LIBRARY_PATH, { withFileTypes: true }, (err, files) => {
-    if (err) {
-      console.error(err);
-      mainWindow.webContents.send("error", JSON.stringify(err));
-      return [];
-    }
-    buildLibraryListing(
-      LIBRARY_PATH,
-      files.filter(negate(isHiddenFile)),
-      event.sender
-    );
+function runInitialScan(event) {
+  forkScanner(event, "libraryListing", "INIT");
+}
+
+function updateDirtySongs(event, dirtySongPaths) {
+  if (isEmpty(dirtySongPaths)) return;
+  forkScanner(event, "updateSongMetadata", "UPDATE_SONGS", dirtySongPaths);
+}
+
+function forkScanner(event, eventName, msg, payload) {
+  const scanner = fork("./src/scanner.js");
+  scanner.send({ msg, payload });
+  scanner.on("message", obj => {
+    if (obj.msg !== eventName) return;
+    if (isUndefined(obj.payload)) {
+      event.sender.send(eventName + "End");
+      scanner.kill();
+    } else event.sender.send(eventName, obj.payload);
   });
 }
 
-// function updateLibraryListing(mainWindow, path) {
-//   mainWindow.webContents.send("libraryListing", []);
-//   fs.readdir(path, { withFileTypes: true }, (err, files) => {
-//     if (err) {
-//       console.error(err);
-//       return [];
-//     }
-//     buildLibraryListing(path, files.filter(negate(isHiddenFile)), {
-//       send: mainWindow.webContents.send
-//     });
-//   });
-// }
-
-const isHiddenFile = file => startsWith(file.name, ".");
-
-function buildLibraryListing(path, files, sender) {
-  if (files.length < 1) return [];
-  try {
-    files.forEach(async (file, index) => {
-      const listing = await bottleneck.schedule(async () => {
-        const parent = {
-          name: file.name,
-          path: `${path}/${file.name}`,
-          songs: []
-        };
-        const listing = await getDirStructureForSubDir(file, path, parent);
-        listing.albums = await getAlbumsBySongs(
-          listing.songs.filter(song => isFileTypeSupported(song.path))
-        );
-        return listing;
-      });
-      if (listing) {
-        sender.send("libraryListing", omit(listing, ["songs"]));
-      }
-      if (index === files.length - 1) {
-        sender.send("libraryListingEnd");
-      }
-    });
-  } catch (e) {
-    console.error(e);
-    mainWindow.webContents.send("error", JSON.stringify(e));
-  }
-}
-
-async function getDirStructureForSubDir(file, path, parent) {
-  const childPath = `${path}/${file.name}`;
-  const song = { name: file.name, path: childPath };
-
-  if (!file.isDirectory()) return parent.songs.push(song);
-
-  const files = fs.readdirSync(childPath, { withFileTypes: true });
-  await Promise.all(
-    files
-      .filter(negate(isHiddenFile))
-      .map(file => getDirStructureForSubDir(file, childPath, parent))
-  );
-  return parent;
-}
-
-async function getAlbumsBySongs(songs) {
-  const songsWithMetadata = await Promise.all(
-    songs.map(async song => ({
-      ...song,
-      metadata: await getFileMetadata(song.path)
-    }))
-  );
-  const albums = reduceSongsToAlbums(songsWithMetadata);
-  const albumsAsArray = Object.keys(albums)
-    .map(name => ({
-      name,
-      songs: albums[name].songs.sort(
-        (a, b) =>
-          get(a, "metadata.track", a.name) - get(b, "metadata.track", b.name)
-      ),
-      date: mostFrequentStringInArray(
-        albums[name].songs.map(s => get(s, "metadata.date", "0"))
-      ),
-      genre: mostFrequentStringInArray(
-        albums[name].songs.map(s => get(s, "metadata.genre", ""))
-      )
-    }))
-    .map(a => {
-      // Make sure songs without an album are last in the array
-      // Atleast till this day :D
-      // Zager & Evans FTW
-      if (a.name === "undefined") return { ...a, date: "2525", genre: "" };
-      return a;
-    });
-  return albumsAsArray.sort((a, b) => a.date.localeCompare(b.date));
-}
-
-async function getFileMetadata(path) {
-  try {
-    return getSongMetadata(path);
-  } catch (e) {
-    console.error(e);
-    mainWindow.webContents.send("error", JSON.stringify(e));
-  }
-}
-
-function reduceSongsToAlbums(songs) {
-  return songs.reduce((albums, song) => {
-    const album = defaultTo(albums[song.metadata.album], { songs: [] });
-    album.songs = [...album.songs, song];
-    return { ...albums, [song.metadata.album]: album };
-  }, {});
-}
-
-function mostFrequentStringInArray(array) {
-  const counts = {};
-  let comparison = 0;
-  let mostFrequent;
-
-  for (let i = 0; i < array.length; i++) {
-    const word = array[i];
-
-    if (isUndefined(counts[word])) counts[word] = 1;
-    else counts[word] += 1;
-
-    if (counts[word] > comparison) {
-      comparison = counts[word];
-      mostFrequent = array[i];
-    }
-  }
-  return mostFrequent;
-}
-
 module.exports = {
-  initLibrary,
-  getLibraryListing
+  initLibrary
 };
