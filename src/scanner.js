@@ -14,21 +14,25 @@ const { isFileTypeSupported, getArtistPath } = require("./util");
 const Bottleneck = require("bottleneck");
 
 const LIBRARY_PATH = `${homedir}/Documents/musat`;
+const INIT = "INIT";
+const UPDATE_SONGS = "UPDATE_SONGS";
+const UPDATE_LIBRARY_LISTINGS = "UPDATE_LIBRARY_LISTINGS";
+const DELETE_LIBRARY_LISTINGS = "DELETE_LIBRARY_LISTINGS";
 
 const bottleneck = new Bottleneck({ maxConcurrent: 12 });
 
 process.on("message", obj => {
   switch (obj.msg) {
-    case "INIT":
+    case INIT:
       getLibraryListing();
       return;
-    case "UPDATE_SONGS":
+    case UPDATE_SONGS:
       updateSongsByPaths(obj.payload);
       return;
-    case "UPDATE_LIBRARY":
+    case UPDATE_LIBRARY_LISTINGS:
       updateLibraryByPaths(new Set(obj.payload));
       return;
-    case "DELETE_LIBRARY_LISTINGS":
+    case DELETE_LIBRARY_LISTINGS:
       deleteLibraryListings(new Set(obj.payload));
       return;
     default:
@@ -217,3 +221,10 @@ function mostFrequentStringInArray(array) {
   }
   return mostFrequent;
 }
+
+module.exports = {
+  INIT,
+  UPDATE_SONGS,
+  UPDATE_LIBRARY_LISTINGS,
+  DELETE_LIBRARY_LISTINGS
+};
