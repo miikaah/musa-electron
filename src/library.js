@@ -8,7 +8,8 @@ const { fork } = require("child_process");
 const LIBRARY_PATH = `${homedir}/Documents/musat`;
 
 function initLibrary(event, songList = []) {
-  if (isEmpty(songList)) runInitialScan(event);
+  const isInitialScan = isEmpty(songList);
+  if (isInitialScan) runInitialScan(event);
   const dirtySongList = [];
   const dirtySongSet = new Set();
   const frontendSongMap = new Map(songList);
@@ -36,9 +37,9 @@ function initLibrary(event, songList = []) {
     }
   });
   watcher.on("ready", () => {
-    isInitialized = true;
     console.log(dirtySongList.length, frontendSongMap.size);
-    updateDirtySongs(event, Array.from(dirtySongSet.values()));
+    if (!isInitialScan)
+      updateDirtySongs(event, Array.from(dirtySongSet.values()));
     event.sender.send(
       "updateSongList",
       [
@@ -46,6 +47,7 @@ function initLibrary(event, songList = []) {
         ...dirtySongList
       ].sort((a, b) => a[0].localeCompare(b[0]))
     );
+    isInitialized = true;
   });
   // watcher.on("change", path => console.log("change", path));
   // watcher.on("unlink", path => console.log("unlink", path));
