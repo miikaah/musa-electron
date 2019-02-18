@@ -62,13 +62,15 @@ function updateDirtySongs(event, dirtySongPaths) {
 
 function forkScanner(event, eventName, msg, payload) {
   const scanner = fork("./src/scanner.js");
+  const endEventName = eventName + "End";
   scanner.send({ msg, payload });
   scanner.on("message", obj => {
-    if (obj.msg !== eventName) return;
+    if (obj.msg !== eventName && obj.msg !== endEventName) return;
     if (isUndefined(obj.payload)) {
-      event.sender.send(eventName + "End");
       scanner.kill();
-    } else event.sender.send(eventName, obj.payload);
+    } else {
+      event.sender.send(eventName, obj.payload);
+    }
   });
 }
 

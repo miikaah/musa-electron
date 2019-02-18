@@ -42,17 +42,23 @@ function getLibraryListing() {
 
 function updateSongsByPaths(paths) {
   paths.forEach(async (path, index) => {
-    const metadata = await bottleneck.schedule(async () => {
-      return getFileMetadata(path);
-    });
+    const metadata = await bottleneck.schedule(async () =>
+      getFileMetadata(path)
+    );
     if (metadata) {
       process.send({
         msg: "updateSongMetadata",
-        payload: { path, name: basename(path), metadata }
+        payload: {
+          path,
+          name: basename(path),
+          metadata,
+          artistPath:
+            LIBRARY_PATH + "/" + path.split(`${LIBRARY_PATH}/`)[1].split("/")[0]
+        }
       });
     }
     if (index === paths.length - 1) {
-      process.send({ msg: "updateSongMetadata" });
+      process.send({ msg: "updateSongMetadataEnd" });
     }
   });
 }
@@ -82,7 +88,7 @@ function buildLibraryListing(path, files) {
         });
       }
       if (index === files.length - 1) {
-        process.send({ msg: "libraryListing" });
+        process.send({ msg: "libraryListingEnd" });
       }
     });
   } catch (e) {
