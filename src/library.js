@@ -64,10 +64,9 @@ function updateDirtySongs(event, dirtySongPaths) {
 
 function forkScanner(event, eventName, msg, payload) {
   const scanner = fork("./src/scanner.js");
-  const endEventName = eventName + "End";
   scanner.send({ msg, payload });
   scanner.on("message", obj => {
-    if (obj.msg !== eventName && obj.msg !== endEventName) return;
+    if (obj.msg !== eventName) return;
     if (isUndefined(obj.payload)) {
       scanner.kill();
     } else {

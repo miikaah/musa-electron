@@ -41,7 +41,7 @@ function getLibraryListing() {
 }
 
 function updateSongsByPaths(paths) {
-  paths.forEach(async (path, index) => {
+  paths.forEach(async path => {
     const metadata = await bottleneck.schedule(async () =>
       getFileMetadata(path)
     );
@@ -57,9 +57,6 @@ function updateSongsByPaths(paths) {
         }
       });
     }
-    if (index === paths.length - 1) {
-      process.send({ msg: "updateSongMetadataEnd" });
-    }
   });
 }
 
@@ -68,7 +65,7 @@ const isHiddenFile = file => startsWith(file.name, ".");
 function buildLibraryListing(path, files) {
   if (files.length < 1) return [];
   try {
-    files.forEach(async (file, index) => {
+    files.forEach(async file => {
       const listing = await bottleneck.schedule(async () => {
         const parent = {
           name: file.name,
@@ -86,9 +83,6 @@ function buildLibraryListing(path, files) {
           msg: "libraryListing",
           payload: omit(listing, ["songs"])
         });
-      }
-      if (index === files.length - 1) {
-        process.send({ msg: "libraryListingEnd" });
       }
     });
   } catch (e) {
