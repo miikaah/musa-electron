@@ -10,7 +10,7 @@ const {
   isUndefined
 } = require("lodash");
 const { getSongMetadata } = require("./metadata");
-const { isFileTypeSupported } = require("./util");
+const { isFileTypeSupported, getArtistPath } = require("./util");
 const Bottleneck = require("bottleneck");
 
 const LIBRARY_PATH = `${homedir}/Documents/musat`;
@@ -24,6 +24,12 @@ process.on("message", obj => {
       return;
     case "UPDATE_SONGS":
       updateSongsByPaths(obj.payload);
+      return;
+    case "UPDATE_LIBRARY":
+      updateLibraryByPaths(new Set(obj.payload));
+      return;
+    case "DELETE_LIBRARY_LISTINGS":
+      deleteLibraryListings(new Set(obj.payload));
       return;
     default:
       return;
@@ -41,7 +47,7 @@ function getLibraryListing() {
 }
 
 function updateSongsByPaths(paths) {
-  paths.forEach(async path => {
+  paths.forEach(async (path, index) => {
     const metadata = await bottleneck.schedule(async () =>
       getFileMetadata(path)
     );
@@ -52,11 +58,48 @@ function updateSongsByPaths(paths) {
           path,
           name: basename(path),
           metadata,
-          artistPath:
-            LIBRARY_PATH + "/" + path.split(`${LIBRARY_PATH}/`)[1].split("/")[0]
+          artistPath: getArtistPath(path, LIBRARY_PATH)
         }
       });
     }
+    if (index === paths.length - 1) {
+      process.send({ msg: "updateSongMetadataEnd" });
+    }
+  });
+}
+
+function updateLibraryByPaths(pathsSet) {
+  fs.readdir(LIBRARY_PATH, { withFileTypes: true }, (err, files) => {
+    if (err) {
+      console.error(err);
+      return [];
+    }
+    const filesToUpdate = files.filter(file => pathsSet.has(file.name));
+    buildLibraryListing(
+      LIBRARY_PATH,
+      filesToUpdate.filter(negate(isHiddenFile))
+    );
+  });
+}
+
+function deleteLibraryListings(pathsSet) {
+  fs.readdir(LIBRARY_PATH, { withFileTypes: true }, (err, files) => {
+    if (err) {
+      console.error(err);
+      return [];
+    }
+    // Find deleted folders
+    const deletedFolders = [];
+    const filesSet = new Set(files.map(file => file.name));
+    pathsSet.forEach(folderName => {
+      if (!filesSet.has(folderName)) deletedFolders.push(folderName);
+    });
+    process.send({
+      msg: "deleteLibraryListings",
+      payload: deletedFolders.map(folderName => `${LIBRARY_PATH}/${folderName}`)
+    });
+    // Kill this fork
+    process.send({ msg: "deleteLibraryListingsEnd" });
   });
 }
 
@@ -65,7 +108,7 @@ const isHiddenFile = file => startsWith(file.name, ".");
 function buildLibraryListing(path, files) {
   if (files.length < 1) return [];
   try {
-    files.forEach(async file => {
+    files.forEach(async (file, index) => {
       const listing = await bottleneck.schedule(async () => {
         const parent = {
           name: file.name,
@@ -83,6 +126,9 @@ function buildLibraryListing(path, files) {
           msg: "libraryListing",
           payload: omit(listing, ["songs"])
         });
+      }
+      if (index === files.length - 1) {
+        process.send({ msg: "libraryListingEnd" });
       }
     });
   } catch (e) {
