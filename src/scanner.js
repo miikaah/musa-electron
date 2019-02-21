@@ -22,123 +22,115 @@ const DELETE_LIBRARY_LISTINGS = "DELETE_LIBRARY_LISTINGS";
 
 const bottleneck = new Bottleneck({ maxConcurrent: 12 });
 
-process.on("message", obj => {
+async function create(obj) {
   switch (obj.msg) {
     case INIT:
-      getLibraryListing();
-      return;
+      return getLibraryListing();
     case UPDATE_SONGS:
-      updateSongsByPaths(obj.payload);
-      return;
+      return updateSongsByPaths(obj.payload);
     case UPDATE_LIBRARY_LISTINGS:
-      updateLibraryByPaths(new Set(obj.payload));
-      return;
+      return updateLibraryByPaths(new Set(obj.payload));
     case DELETE_LIBRARY_LISTINGS:
-      deleteLibraryListings(new Set(obj.payload));
-      return;
+      return deleteLibraryListings(new Set(obj.payload));
     default:
       return;
   }
-});
+}
 
-function getLibraryListing() {
-  fs.readdir(LIBRARY_PATH, { withFileTypes: true }, (err, files) => {
-    if (err) {
-      console.error(err);
-      return [];
-    }
-    buildLibraryListing(LIBRARY_PATH, files.filter(negate(isHiddenFile)));
+async function getLibraryListing() {
+  return new Promise((resolve, reject) => {
+    fs.readdir(LIBRARY_PATH, { withFileTypes: true }, (err, files) => {
+      if (err) reject(err);
+      resolve(
+        buildLibraryListing(LIBRARY_PATH, files.filter(negate(isHiddenFile)))
+      );
+    });
   });
 }
 
-function updateSongsByPaths(paths) {
-  paths.forEach(async (path, index) => {
-    const metadata = await bottleneck.schedule(async () =>
-      getFileMetadata(path)
-    );
-    if (metadata) {
-      process.send({
-        msg: "updateSongMetadata",
-        payload: {
+async function updateSongsByPaths(paths) {
+  return new Promise((resolve, reject) => {
+    try {
+      paths.forEach(async path => {
+        const metadata = await bottleneck.schedule(async () =>
+          getSongMetadata(path)
+        );
+        resolve({
           path,
           name: basename(path),
           metadata,
           artistPath: getArtistPath(path, LIBRARY_PATH)
-        }
+        });
       });
-    }
-    if (index === paths.length - 1) {
-      process.send({ msg: "updateSongMetadataEnd" });
+    } catch (e) {
+      reject(e);
     }
   });
 }
 
-function updateLibraryByPaths(pathsSet) {
-  fs.readdir(LIBRARY_PATH, { withFileTypes: true }, (err, files) => {
-    if (err) {
-      console.error(err);
-      return [];
-    }
-    const filesToUpdate = files.filter(file => pathsSet.has(file.name));
-    buildLibraryListing(
-      LIBRARY_PATH,
-      filesToUpdate.filter(negate(isHiddenFile))
-    );
+async function updateLibraryByPaths(pathsSet) {
+  return new Promise((resolve, reject) => {
+    fs.readdir(LIBRARY_PATH, { withFileTypes: true }, (err, files) => {
+      if (err) reject(err);
+      const filesToUpdate = files.filter(file => pathsSet.has(file.name));
+      resolve(
+        buildLibraryListing(
+          LIBRARY_PATH,
+          filesToUpdate.filter(negate(isHiddenFile))
+        )
+      );
+    });
   });
 }
 
-function deleteLibraryListings(pathsSet) {
-  fs.readdir(LIBRARY_PATH, { withFileTypes: true }, (err, files) => {
-    if (err) {
-      console.error(err);
-      return [];
-    }
-    // Find deleted folders
-    const deletedFolders = [];
-    const filesSet = new Set(files.map(file => file.name));
-    pathsSet.forEach(folderName => {
-      if (!filesSet.has(folderName)) deletedFolders.push(folderName);
+async function deleteLibraryListings(pathsSet) {
+  return new Promise((resolve, reject) => {
+    fs.readdir(LIBRARY_PATH, { withFileTypes: true }, (err, files) => {
+      if (err) reject(err);
+      // Find deleted folders
+      const deletedFolders = [];
+      const filesSet = new Set(files.map(file => file.name));
+      pathsSet.forEach(folderName => {
+        if (!filesSet.has(folderName)) deletedFolders.push(folderName);
+      });
+      resolve(
+        deletedFolders.map(folderName => `${LIBRARY_PATH}/${folderName}`)
+      );
     });
-    process.send({
-      msg: "deleteLibraryListings",
-      payload: deletedFolders.map(folderName => `${LIBRARY_PATH}/${folderName}`)
-    });
-    // Kill this fork
-    process.send({ msg: "deleteLibraryListingsEnd" });
   });
 }
 
 const isHiddenFile = file => startsWith(file.name, ".");
 
-function buildLibraryListing(path, files) {
-  if (files.length < 1) return [];
-  try {
-    files.forEach(async (file, index) => {
-      const listing = await bottleneck.schedule(async () => {
-        const parent = {
-          name: file.name,
-          path: `${path}/${file.name}`,
-          songs: []
-        };
-        const listing = await getDirStructureForSubDir(file, path, parent);
-        listing.albums = await getAlbumsBySongs(
-          listing.songs.filter(song => isFileTypeSupported(song.path))
-        );
-        return listing;
-      });
-      if (listing) {
-        process.send({
-          msg: "libraryListing",
-          payload: omit(listing, ["songs"])
-        });
-      }
-      if (index === files.length - 1) {
-        process.send({ msg: "libraryListingEnd" });
-      }
-    });
-  } catch (e) {
-    console.error(e);
-  }
+async function buildLibraryListing(path, files) {
+  return new Promise(async (resolve, reject) => {
+    if (files.length < 1) return [];
+    const library = [];
+    try {
+      await Promise.all(
+        files.map(async file => {
+          const artist = await bottleneck.schedule(async () => {
+            const parent = {
+              name: file.name,
+              path: `${path}/${file.name}`,
+              songs: []
+            };
+            const listing = await getDirStructureForSubDir(file, path, parent);
+            listing.albums = await getAlbumsBySongs(
+              listing.songs.filter(song => isFileTypeSupported(song.path))
+            );
+            return listing;
+          });
+          if (artist) {
+            library.push(omit(artist, ["songs"]));
+          }
+        })
+      );
+      resolve(library);
+    } catch (e) {
+      reject(e);
+    }
+  });
 }
 
 async function getDirStructureForSubDir(file, path, parent) {
@@ -160,7 +152,7 @@ async function getAlbumsBySongs(songs) {
   const songsWithMetadata = await Promise.all(
     songs.map(async song => ({
       ...song,
-      metadata: await getFileMetadata(song.path)
+      metadata: await getSongMetadata(song.path)
     }))
   );
   const albums = reduceSongsToAlbums(songsWithMetadata);
@@ -187,14 +179,6 @@ async function getAlbumsBySongs(songs) {
     return a;
   });
   return albumsAsArray.sort((a, b) => a.date.localeCompare(b.date));
-}
-
-async function getFileMetadata(path) {
-  try {
-    return getSongMetadata(path);
-  } catch (e) {
-    console.error(e);
-  }
 }
 
 function reduceSongsToAlbums(songs) {
@@ -245,5 +229,6 @@ module.exports = {
   INIT,
   UPDATE_SONGS,
   UPDATE_LIBRARY_LISTINGS,
-  DELETE_LIBRARY_LISTINGS
+  DELETE_LIBRARY_LISTINGS,
+  create
 };

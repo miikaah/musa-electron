@@ -9,14 +9,28 @@ const {
   UPDATE_LIBRARY_LISTINGS,
   DELETE_LIBRARY_LISTINGS
 } = require("./scanner");
-const { fork } = require("child_process");
+const { requireTaskPool } = require("electron-remote");
 
 const LIBRARY_PATH = `${homedir}/Documents/musat`;
 
 const WATCHER_TIMEOUT = 3000;
 
+let mainWindow;
+const logToRenderer = payload => {
+  if (process.env.IS_DEV) mainWindow.webContents.send("log", payload);
+};
+const errorToRenderer = payload => {
+  if (process.env.IS_DEV) mainWindow.webContents.send("error", payload);
+};
+
+function init(_window) {
+  mainWindow = _window;
+}
+
 function initLibrary(event, songList = []) {
   const isInitialScan = isEmpty(songList);
+  logToRenderer(songList);
+  logToRenderer("isInitialScan: " + isInitialScan);
 
   if (isInitialScan) runInitialScan(event);
 
@@ -164,18 +178,16 @@ function updateLibrary(event, updatedSongList = [], removedSongList = []) {
     forkScanner(event, "deleteLibraryListings", DELETE_LIBRARY_LISTINGS, paths);
 }
 
-function forkScanner(event, eventName, msg, payload) {
-  const scanner = fork("./src/scanner.js");
-  const endEventName = eventName + "End";
-  scanner.send({ msg, payload });
-  scanner.on("message", obj => {
-    if (obj.msg !== eventName && obj.msg !== endEventName) return;
-    if (isUndefined(obj.payload)) {
-      scanner.kill();
-    } else {
-      event.sender.send(eventName, obj.payload);
-    }
-  });
+async function forkScanner(event, eventName, msg, payload) {
+  try {
+    const Scanner = requireTaskPool(require.resolve("./scanner.js"));
+    const results = await Scanner.create({ msg, payload });
+    logToRenderer("Scanner result length: ", results.length);
+    results.forEach(result => event.sender.send(eventName, result));
+  } catch (e) {
+    console.error(e);
+    errorToRenderer(e);
+  }
 }
 
 function getStatsHash(stats) {
@@ -183,5 +195,7 @@ function getStatsHash(stats) {
 }
 
 module.exports = {
-  initLibrary
+  init,
+  initLibrary,
+  forkScanner
 };

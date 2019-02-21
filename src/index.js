@@ -3,17 +3,18 @@
 
 const path = require("path");
 const { app, BrowserWindow, ipcMain } = require("electron");
-const { initLibrary } = require("./library");
+const { init, initLibrary } = require("./library");
+
+let mainWindow;
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
-let mainWindow;
 
 function createWindow() {
   const { screen } = require("electron");
   const allDisplays = screen.getAllDisplays();
   let biggestDisplay = allDisplays[0];
-  if (allDisplays.length > 1) {
+  if (process.env.IS_DEV && allDisplays.length > 1) {
     allDisplays.forEach(
       display =>
         (biggestDisplay =
@@ -24,9 +25,9 @@ function createWindow() {
   }
   // Create the browser window.
   mainWindow = new BrowserWindow({
-    x: biggestDisplay.bounds.x + biggestDisplay.size.width * 0.125,
+    x: biggestDisplay.bounds.x + biggestDisplay.size.width * 0.2,
     y: biggestDisplay.bounds.y,
-    width: biggestDisplay.size.width,
+    width: 1600,
     height: 1000,
     webPreferences: {
       nodeIntegration: true,
@@ -53,8 +54,8 @@ function createWindow() {
     // when you should delete the corresponding element.
     mainWindow = null;
   });
+  init(mainWindow);
 }
-
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
