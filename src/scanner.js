@@ -1,4 +1,5 @@
 const fs = require("fs");
+const fsPromises = require("fs").promises;
 const homedir = require("os").homedir();
 const { basename } = require("path");
 const {
@@ -163,8 +164,8 @@ async function getAlbumsBySongs(songs) {
     }))
   );
   const albums = reduceSongsToAlbums(songsWithMetadata);
-  const albumsAsArray = Object.keys(albums)
-    .map(name => ({
+  const albumsAsArray = (await Promise.all(
+    Object.keys(albums).map(async name => ({
       name,
       songs: albums[name].songs.sort(
         (a, b) =>
@@ -175,15 +176,16 @@ async function getAlbumsBySongs(songs) {
       ),
       genre: mostFrequentStringInArray(
         albums[name].songs.map(s => get(s, "metadata.genre", ""))
-      )
+      ),
+      cover: await getCoverPath(albums[name].path, name)
     }))
-    .map(a => {
-      // Make sure songs without an album are last in the array
-      // Atleast till this day :D
-      // Zager & Evans FTW
-      if (a.name === "undefined") return { ...a, date: "2525", genre: "" };
-      return a;
-    });
+  )).map(a => {
+    // Make sure songs without an album are last in the array
+    // Atleast till this day :D
+    // Zager & Evans FTW
+    if (a.name === "undefined") return { ...a, date: "2525", genre: "" };
+    return a;
+  });
   return albumsAsArray.sort((a, b) => a.date.localeCompare(b.date));
 }
 
@@ -199,6 +201,7 @@ function reduceSongsToAlbums(songs) {
   return songs.reduce((albums, song) => {
     const album = defaultTo(albums[song.metadata.album], { songs: [] });
     album.songs = [...album.songs, song];
+    album.path = song.path.replace(song.name, "");
     return { ...albums, [song.metadata.album]: album };
   }, {});
 }
@@ -220,6 +223,22 @@ function mostFrequentStringInArray(array) {
     }
   }
   return mostFrequent;
+}
+
+async function getCoverPath(path, albumName) {
+  const dir = await fsPromises.readdir(path);
+  const pics = dir.filter(p => /(.png|.jpg)$/.test(p));
+  if (!pics.length) return;
+  const albumNamePic = pics.find(
+    s =>
+      get(s.split("."), "0", "").toLowerCase() === `${albumName}`.toLowerCase()
+  );
+  if (albumNamePic) return path + albumNamePic;
+  const defaultNamePic = pics.find(s =>
+    /^(((C|c)over)|((f|F)(ront|older)))(.png|.jpg)$/.test(s.toLowerCase())
+  );
+  if (defaultNamePic) return path + defaultNamePic;
+  return path + pics[0];
 }
 
 module.exports = {
