@@ -1,7 +1,7 @@
 const fs = require("fs");
 const fsPromises = require("fs").promises;
 const homedir = require("os").homedir();
-const { basename } = require("path");
+const { basename, parse } = require("path");
 const {
   negate,
   startsWith,
@@ -12,6 +12,7 @@ const {
 } = require("lodash");
 const { getSongMetadata } = require("./metadata");
 const { isFileTypeSupported, getArtistPath } = require("./util");
+
 const Bottleneck = require("bottleneck");
 
 const LIBRARY_PATH = `${homedir}/Documents/musat`;
@@ -36,6 +37,9 @@ async function create(obj) {
       return;
   }
 }
+
+// For debugging
+process.on("message", create);
 
 async function getLibraryListing() {
   return new Promise((resolve, reject) => {
@@ -211,16 +215,27 @@ function mostFrequentStringInArray(array) {
 
 async function getCoverPath(path, albumName) {
   const dir = await fsPromises.readdir(path);
-  const pics = dir.filter(p => /(.png|.jpg)$/.test(p));
+  const pics = dir.filter(p => /(.png|.jpg|.jpeg)$/.test(p));
   if (!pics.length) return;
-  const albumNamePic = pics.find(
-    s =>
-      get(s.split("."), "0", "").toLowerCase() === `${albumName}`.toLowerCase()
-  );
+  const albumNamePic = pics.find(s => {
+    const parsedName = parse(s);
+    const name = parsedName.base
+      .replace(parsedName.ext, "")
+      .replace(/[/?<>;*|"]/g, "")
+      .toLowerCase();
+    const aName = `${albumName}`.replace(/[/?<>;*|"]/g, "").toLowerCase();
+    return name === aName;
+  });
   if (albumNamePic) return path + albumNamePic;
-  const defaultNamePic = pics.find(s =>
-    /^(((C|c)over)|((f|F)(ront|older)))(.png|.jpg)$/.test(s.toLowerCase())
-  );
+  const defaultNamePic = pics.find(pic => {
+    const s = pic.toLowerCase();
+    return (
+      s.includes("front") ||
+      s.includes("cover") ||
+      s.includes("_large") ||
+      s.includes("folder")
+    );
+  });
   if (defaultNamePic) return path + defaultNamePic;
   return path + pics[0];
 }

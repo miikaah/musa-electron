@@ -149,12 +149,12 @@ function initLibrary(event, songList = []) {
 }
 
 function runInitialScan(event) {
-  forkScanner(event, "libraryListing", INIT);
+  runInBackgroud(event, "libraryListing", INIT);
 }
 
 function updateDirtySongs(event, dirtySongPaths) {
   if (isEmpty(dirtySongPaths)) return;
-  forkScanner(event, "updateSongMetadata", UPDATE_SONGS, dirtySongPaths);
+  runInBackgroud(event, "updateSongMetadata", UPDATE_SONGS, dirtySongPaths);
 }
 
 function updateLibrary(event, updatedSongList = [], removedSongList = []) {
@@ -172,17 +172,31 @@ function updateLibrary(event, updatedSongList = [], removedSongList = []) {
   ];
 
   if (hasUpdatedSongs || hasDeletedSongs)
-    forkScanner(event, "libraryListing", UPDATE_LIBRARY_LISTINGS, paths);
+    runInBackgroud(event, "libraryListing", UPDATE_LIBRARY_LISTINGS, paths);
   // Deletes complete artist folders if necessary
   if (hasDeletedSongs)
-    forkScanner(event, "deleteLibraryListings", DELETE_LIBRARY_LISTINGS, paths);
+    runInBackgroud(
+      event,
+      "deleteLibraryListings",
+      DELETE_LIBRARY_LISTINGS,
+      paths
+    );
 }
 
-async function forkScanner(event, eventName, msg, payload) {
+function runInBackgroud(event, eventName, msg, payload) {
+  // For debugging
+  // if (process.env.IS_DEV) {
+  //   require("child_process").fork("./src/scanner.js").send({ msg, payload });
+  //   return;
+  // }
+  runInHiddenBrowserWindow(event, eventName, msg, payload);
+}
+
+async function runInHiddenBrowserWindow(event, eventName, msg, payload) {
   try {
     const Scanner = requireTaskPool(require.resolve("./scanner.js"));
     const results = await Scanner.create({ msg, payload });
-    logToRenderer("Scanner result length: ", results.length);
+    logToRenderer("Scanner result length: " + results.length);
     results.forEach(result => event.sender.send(eventName, result));
   } catch (e) {
     console.error(e);
@@ -196,6 +210,5 @@ function getStatsHash(stats) {
 
 module.exports = {
   init,
-  initLibrary,
-  forkScanner
+  initLibrary
 };
