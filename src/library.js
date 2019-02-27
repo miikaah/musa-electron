@@ -11,6 +11,8 @@ const {
 } = require("./scanner");
 const { requireTaskPool } = require("electron-remote");
 
+const Scanner = requireTaskPool(require.resolve("./scanner.js"));
+
 const LIBRARY_PATH = `${homedir}/Documents/musat`;
 
 const WATCHER_TIMEOUT = 3000;
@@ -194,7 +196,6 @@ function runInBackgroud(event, eventName, msg, payload) {
 
 async function runInHiddenBrowserWindow(event, eventName, msg, payload) {
   try {
-    const Scanner = requireTaskPool(require.resolve("./scanner.js"));
     const results = await Scanner.create({ msg, payload });
     logToRenderer("Scanner result length: " + results.length);
     results.forEach(result => event.sender.send(eventName, result));

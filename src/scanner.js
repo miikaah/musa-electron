@@ -120,6 +120,7 @@ async function buildLibraryListing(path, files) {
               songs: []
             };
             const listing = await getDirStructureForSubDir(file, path, parent);
+            if (!listing.songs) return;
             listing.albums = await getAlbumsBySongs(
               listing.songs.filter(song => isFileTypeSupported(song.path))
             );
