@@ -155,10 +155,18 @@ async function getDirStructureForSubDir(file, path, parent) {
 
 async function getAlbumsBySongs(songs) {
   const songsWithMetadata = await Promise.all(
-    songs.map(async song => ({
-      ...song,
-      metadata: await getSongMetadata(song.path)
-    }))
+    songs.map(async song => {
+      let metadata = {};
+      try {
+        metadata = await getSongMetadata(song.path);
+      } catch (e) {
+        console.error(e);
+      }
+      return {
+        ...song,
+        metadata
+      };
+    })
   );
   const albums = reduceSongsToAlbums(songsWithMetadata);
   const albumsAsArray = (await Promise.all(
