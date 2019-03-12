@@ -1,7 +1,13 @@
 const homedir = require("os").homedir();
 const chokidar = require("chokidar");
 const hash = require("object-hash");
-const { isEmpty, pick, isUndefined, differenceBy } = require("lodash");
+const {
+  isEmpty,
+  pick,
+  isUndefined,
+  differenceBy,
+  defaultTo
+} = require("lodash");
 const { isFileTypeSupported, getArtistPath } = require("./util");
 const {
   INIT,
@@ -198,7 +204,9 @@ async function runInHiddenBrowserWindow(event, eventName, msg, payload) {
   try {
     const results = await Scanner.create({ msg, payload });
     logToRenderer("Scanner result length: " + results.length);
-    results.forEach(result => event.sender.send(eventName, result));
+    defaultTo(results, []).forEach(result =>
+      event.sender.send(eventName, result)
+    );
   } catch (e) {
     console.error(e);
     errorToRenderer(e);

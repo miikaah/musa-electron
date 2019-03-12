@@ -25,7 +25,7 @@ function createWindow() {
   }
   // Create the browser window.
   mainWindow = new BrowserWindow({
-    x: biggestDisplay.bounds.x + biggestDisplay.size.width * 0.2,
+    x: biggestDisplay.bounds.x,
     y: biggestDisplay.bounds.y,
     width: 1600,
     height: 1000,
