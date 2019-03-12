@@ -1,14 +1,8 @@
 const homedir = require("os").homedir();
 const chokidar = require("chokidar");
 const hash = require("object-hash");
-const {
-  isEmpty,
-  pick,
-  isUndefined,
-  differenceBy,
-  defaultTo
-} = require("lodash");
-const { isFileTypeSupported, getArtistPath } = require("./util");
+const { isEmpty, pick, isUndefined, differenceBy } = require("lodash");
+const { isWatchableFile, getArtistPath } = require("./util");
 const {
   INIT,
   UPDATE_SONGS,
@@ -81,7 +75,7 @@ function initLibrary(event, songList = []) {
 
   let addedSongs = [];
   watcher.on("add", (path, stats) => {
-    if (!isFileTypeSupported(path)) return;
+    if (!isWatchableFile(path)) return;
     const statsHash = getStatsHash(stats);
     localSongList.push([path, statsHash]);
 
@@ -117,7 +111,7 @@ function initLibrary(event, songList = []) {
   // Update listener
   let updatedSongs = [];
   watcher.on("change", (path, stats) => {
-    if (!isInitialized || !isFileTypeSupported(path)) return;
+    if (!isInitialized || !isWatchableFile(path)) return;
     updatedSongs.push([path, getStatsHash(stats)]);
     if (updatedSongs.length <= 1) {
       setTimeout(() => {
@@ -139,7 +133,7 @@ function initLibrary(event, songList = []) {
   // Delete listener
   let removedSongs = [];
   watcher.on("unlink", path => {
-    if (!isInitialized || !isFileTypeSupported(path)) return;
+    if (!isInitialized || !isWatchableFile(path)) return;
     removedSongs.push([path]);
     if (removedSongs.length <= 1) {
       setTimeout(() => {
@@ -204,9 +198,8 @@ async function runInHiddenBrowserWindow(event, eventName, msg, payload) {
   try {
     const results = await Scanner.create({ msg, payload });
     logToRenderer("Scanner result length: " + results.length);
-    defaultTo(results, []).forEach(result =>
-      event.sender.send(eventName, result)
-    );
+    if (!Array.isArray(results)) return;
+    results.forEach(result => event.sender.send(eventName, result));
   } catch (e) {
     console.error(e);
     errorToRenderer(e);
