@@ -3,7 +3,7 @@
 
 const path = require("path");
 const { app, BrowserWindow, ipcMain } = require("electron");
-const { init, initLibrary } = require("./library");
+const { init, initLibrary, runInitialScan } = require("./library");
 
 let mainWindow;
 
@@ -79,3 +79,4 @@ app.on("activate", function() {
 // code. You can also put them in separate files and require them here.
 
 ipcMain.on("initLibrary", initLibrary);
+ipcMain.on("runInitialScan", runInitialScan);

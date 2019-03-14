@@ -1,4 +1,4 @@
-const { isEmpty, camelCase, mapKeys } = require("lodash");
+const { isEmpty, camelCase, mapKeys, defaultTo } = require("lodash");
 const { isFileTypeSupported } = require("./util");
 const { ffprobe } = require("./ffprobe");
 const ffprobeStatic = require("ffprobe-static");
@@ -17,6 +17,8 @@ async function getSongMetadata(path) {
           getSafeTagFieldNames({
             ...tags.format.tags,
             duration: formatDuration(tags.format.duration),
+            bitRate: `${parseInt(tags.format.bit_rate / 1000, 10)} kbps`,
+            date: `${defaultTo(parseInt(tags.format.tags.date, 10), "")}`,
             track,
             totalTracks
           })

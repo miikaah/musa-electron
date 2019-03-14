@@ -212,5 +212,6 @@ function getStatsHash(stats) {
 
 module.exports = {
   init,
-  initLibrary
+  initLibrary,
+  runInitialScan
 };
