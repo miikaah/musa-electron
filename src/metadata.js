@@ -1,11 +1,11 @@
 const { isEmpty, camelCase, mapKeys, defaultTo } = require("lodash");
-const { isFileTypeSupported } = require("./util");
+const { isSupportedFileType } = require("./util");
 const { ffprobe } = require("./ffprobe");
 const ffprobeStatic = require("ffprobe-static");
 
 async function getSongMetadata(path) {
   return new Promise((resolve, reject) => {
-    if (isEmpty(path) || !isFileTypeSupported(path)) return resolve();
+    if (isEmpty(path) || !isSupportedFileType(path)) return resolve();
     ffprobe(
       path,
       ["-v", "error", "-print_format", "json", "-show_entries", "format"],

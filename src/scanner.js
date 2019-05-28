@@ -4,14 +4,14 @@ const homedir = require("os").homedir();
 const { basename, parse } = require("path");
 const {
   negate,
-  startsWith,
   defaultTo,
   omit,
   get,
-  isUndefined
+  isUndefined,
+  flatten
 } = require("lodash");
 const { getSongMetadata } = require("./metadata");
-const { isFileTypeSupported, getArtistPath } = require("./util");
+const { isSupportedFileType, getArtistPath, isHiddenFile } = require("./util");
 
 const Bottleneck = require("bottleneck");
 
@@ -26,7 +26,7 @@ const bottleneck = new Bottleneck({ maxConcurrent: 12 });
 async function create(obj) {
   switch (obj.msg) {
     case INIT:
-      return getLibraryListing();
+      return init(obj.payload);
     case UPDATE_SONGS:
       return updateSongsByPaths(obj.payload);
     case UPDATE_LIBRARY_LISTINGS:
@@ -38,16 +38,45 @@ async function create(obj) {
   }
 }
 
+async function init(folderName) {
+  return scanArtistFolder(`${LIBRARY_PATH}/${folderName}`, folderName);
+}
+
 // For debugging
 process.on("message", create);
 
-async function getLibraryListing() {
+async function scanArtistFolder(path, folderName) {
   return new Promise((resolve, reject) => {
-    fs.readdir(LIBRARY_PATH, { withFileTypes: true }, (err, files) => {
+    fs.readdir(path, { withFileTypes: true }, async (err, files) => {
       if (err) reject(err);
-      resolve(
-        buildLibraryListing(LIBRARY_PATH, files.filter(negate(isHiddenFile)))
+      const albums = await scanAlbumFolder(
+        path,
+        files.filter(negate(isHiddenFile)),
+        folderName
       );
+      const songs = files
+        .filter(file => !file.isDirectory())
+        .filter(negate(isHiddenFile))
+        .map(file => ({
+          ...file,
+          path: `${path}/${file.name}`
+        }))
+        .filter(song => isSupportedFileType(song.path));
+      const songsWithMetadata = await getSongsWithMetadata(songs);
+      const emptyAlbum = {
+        date: "2525",
+        genre: "",
+        name: "undefined",
+        songs: songsWithMetadata
+      };
+      resolve({
+        name: folderName,
+        path,
+        albums:
+          Array.isArray(songsWithMetadata) && songsWithMetadata.length > 0
+            ? flatten(albums.concat(emptyAlbum))
+            : flatten(albums)
+      });
     });
   });
 }
@@ -104,8 +133,6 @@ async function deleteLibraryListings(pathsSet) {
   });
 }
 
-const isHiddenFile = file => startsWith(file.name, ".");
-
 async function buildLibraryListing(path, files) {
   return new Promise(async (resolve, reject) => {
     if (files.length < 1) return [];
@@ -122,7 +149,7 @@ async function buildLibraryListing(path, files) {
             const listing = await getDirStructureForSubDir(file, path, parent);
             if (!listing.songs) return;
             listing.albums = await getAlbumsBySongs(
-              listing.songs.filter(song => isFileTypeSupported(song.path))
+              listing.songs.filter(song => isSupportedFileType(song.path))
             );
             return listing;
           });
@@ -132,6 +159,34 @@ async function buildLibraryListing(path, files) {
         })
       );
       resolve(library);
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+async function scanAlbumFolder(path, files) {
+  return new Promise(async (resolve, reject) => {
+    if (files.length < 1) return [];
+    const allSongs = [];
+    try {
+      await Promise.all(
+        files.map(async file => {
+          const songs = await bottleneck.schedule(async () => {
+            const parent = { songs: [] };
+            const listing = await getDirStructureForSubDir(file, path, parent);
+            return listing.songs;
+          });
+          if (songs) {
+            allSongs.push(...songs);
+          }
+        })
+      );
+      resolve(
+        getAlbumsBySongs(
+          allSongs.filter(song => isSupportedFileType(song.path))
+        )
+      );
     } catch (e) {
       reject(e);
     }
@@ -153,8 +208,8 @@ async function getDirStructureForSubDir(file, path, parent) {
   return parent;
 }
 
-async function getAlbumsBySongs(songs) {
-  const songsWithMetadata = await Promise.all(
+async function getSongsWithMetadata(songs) {
+  return Promise.all(
     songs.map(async song => {
       let metadata = {};
       try {
@@ -168,6 +223,10 @@ async function getAlbumsBySongs(songs) {
       };
     })
   );
+}
+
+async function getAlbumsBySongs(songs) {
+  const songsWithMetadata = await getSongsWithMetadata(songs);
   const albums = reduceSongsToAlbums(songsWithMetadata);
   const albumsAsArray = (await Promise.all(
     Object.keys(albums).map(async name => ({
@@ -254,5 +313,6 @@ module.exports = {
   UPDATE_SONGS,
   UPDATE_LIBRARY_LISTINGS,
   DELETE_LIBRARY_LISTINGS,
-  create
+  create,
+  init
 };

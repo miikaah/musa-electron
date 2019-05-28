@@ -1,8 +1,8 @@
 const homedir = require("os").homedir();
 const chokidar = require("chokidar");
 const hash = require("object-hash");
-const { isEmpty, pick, isUndefined, differenceBy } = require("lodash");
-const { isWatchableFile, getArtistPath } = require("./util");
+const { negate, isEmpty, pick, isUndefined, differenceBy } = require("lodash");
+const { isWatchableFile, getArtistPath, isHiddenFile } = require("./util");
 const {
   INIT,
   UPDATE_SONGS,
@@ -10,6 +10,7 @@ const {
   DELETE_LIBRARY_LISTINGS
 } = require("./scanner");
 const { requireTaskPool } = require("electron-remote");
+const fs = require("fs");
 
 const Scanner = requireTaskPool(require.resolve("./scanner.js"));
 
@@ -31,7 +32,6 @@ function init(_window) {
 
 function initLibrary(event, songList = []) {
   const isInitialScan = isEmpty(songList);
-  logToRenderer(songList);
   logToRenderer("isInitialScan: " + isInitialScan);
 
   if (isInitialScan) runInitialScan(event);
@@ -150,8 +150,38 @@ function initLibrary(event, songList = []) {
   });
 }
 
-function runInitialScan(event) {
-  runInBackgroud(event, "libraryListing", INIT);
+async function runInitialScan(event) {
+  const eventName = "libraryListing";
+  const msg = INIT;
+  const files = await getArtistFolders();
+  event.sender.send("startInitialScan", files.length);
+
+  let counter = 0;
+  await Promise.all(
+    files.map(async file => {
+      try {
+        // For debugging
+        // require("child_process").fork("./src/scanner.js").send({ msg, payload: file.name });
+        const listing = await Scanner.create({ msg, payload: file.name });
+        counter++;
+        event.sender.send("updateInitialScan", counter);
+        event.sender.send(eventName, listing);
+      } catch (e) {
+        console.error(e);
+        errorToRenderer(e.message);
+      }
+    })
+  );
+  event.sender.send("endInitialScan");
+}
+
+async function getArtistFolders() {
+  return new Promise((resolve, reject) => {
+    fs.readdir(LIBRARY_PATH, { withFileTypes: true }, (err, files) => {
+      if (err) reject(err);
+      resolve(files.filter(negate(isHiddenFile)));
+    });
+  });
 }
 
 function updateDirtySongs(event, dirtySongPaths) {
