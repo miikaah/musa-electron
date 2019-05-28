@@ -197,8 +197,8 @@ function runInBackgroud(event, eventName, msg, payload) {
 async function runInHiddenBrowserWindow(event, eventName, msg, payload) {
   try {
     const results = await Scanner.create({ msg, payload });
-    logToRenderer("Scanner result length: " + results.length);
     if (!Array.isArray(results)) return;
+    logToRenderer("Scanner result length: " + results.length);
     results.forEach(result => event.sender.send(eventName, result));
   } catch (e) {
     console.error(e);
