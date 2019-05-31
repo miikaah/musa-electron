@@ -12,7 +12,7 @@ const {
 const { requireTaskPool } = require("electron-remote");
 const fs = require("fs");
 
-const Scanner = requireTaskPool(require.resolve("./scanner.js"));
+const Scanner = requireTaskPool(require.resolve("./scanner.js"), 4, 10000);
 
 const LIBRARY_PATH = `${homedir}/Documents/musat`;
 
