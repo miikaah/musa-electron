@@ -56,6 +56,13 @@ function createWindow() {
     if (!process.env.IS_DEV) return [];
     return [
       {
+        label: "Refresh",
+        accelerator: "CmdOrCtrl+R",
+        click() {
+          mainWindow.reload();
+        }
+      },
+      {
         label: "Toggle Developer Tools",
         accelerator:
           process.platform === "darwin" ? "Alt+Command+I" : "Ctrl+Shift+I",
