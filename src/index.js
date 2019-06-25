@@ -52,6 +52,20 @@ function createWindow() {
     mainWindow = null;
   });
 
+  const getDevEnvAccelerators = () => {
+    if (!process.env.IS_DEV) return [];
+    return [
+      {
+        label: "Toggle Developer Tools",
+        accelerator:
+          process.platform === "darwin" ? "Alt+Command+I" : "Ctrl+Shift+I",
+        click: function(item, focusedWindow) {
+          if (focusedWindow) focusedWindow.toggleDevTools();
+        }
+      }
+    ];
+  };
+
   // Create the Application's main menu
   var template = [
     {
@@ -62,6 +76,7 @@ function createWindow() {
           selector: "orderFrontStandardAboutPanel:"
         },
         { type: "separator" },
+        ...getDevEnvAccelerators(),
         {
           label: "Quit",
           accelerator: "Command+Q",
