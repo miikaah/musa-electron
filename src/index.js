@@ -23,24 +23,33 @@ function createWindow() {
             : biggestDisplay)
     );
   }
+  const getWebPreferences = () => {
+    return process.env.IS_DEV
+      ? {
+          nodeIntegration: true,
+          webSecurity: false
+        }
+      : {
+          nodeIntegration: true,
+          webSecurity: true
+        };
+  };
   // Create the browser window.
   mainWindow = new BrowserWindow({
     x: biggestDisplay.bounds.x,
     y: biggestDisplay.bounds.y,
     width: 1600,
     height: 1000,
-    webPreferences: {
-      nodeIntegration: true,
-      webSecurity: false
-    }
+    webPreferences: getWebPreferences()
   });
 
-  // and load the index.html of the app.
-  mainWindow.loadURL(
-    process.env.IS_DEV
+  const getURL = () => {
+    return process.env.IS_DEV
       ? "http://localhost:3000"
-      : `file://${path.join(__dirname, "../build/index.html")}`
-  );
+      : `file://${path.join(__dirname, "../build/index.html")}`;
+  };
+  // and load the index.html of the app.
+  mainWindow.loadURL(getURL());
 
   if (process.env.IS_DEV) mainWindow.webContents.openDevTools();
 
