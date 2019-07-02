@@ -1,5 +1,6 @@
 const fs = require("fs");
 const fsPromises = require("fs").promises;
+const { join } = require("path");
 const homedir = require("os").homedir();
 const { basename, parse } = require("path");
 const {
@@ -38,8 +39,8 @@ async function create(obj) {
   }
 }
 
-async function init(folderName) {
-  return scanArtistFolder(`${LIBRARY_PATH}/${folderName}`, folderName);
+async function init({ path, folderName }) {
+  return scanArtistFolder(join(path, folderName), folderName);
 }
 
 // For debugging

@@ -1,4 +1,3 @@
-const homedir = require("os").homedir();
 const chokidar = require("chokidar");
 const hash = require("object-hash");
 const { negate, isEmpty, pick, isUndefined, differenceBy } = require("lodash");
@@ -14,8 +13,6 @@ const fs = require("fs");
 
 const Scanner = requireTaskPool(require.resolve("./scanner.js"));
 
-const LIBRARY_PATH = `${homedir}/Documents/musat`;
-
 const WATCHER_TIMEOUT = 3000;
 
 let mainWindow;
@@ -30,7 +27,16 @@ function init(_window) {
   mainWindow = _window;
 }
 
-function initLibrary(event, songList = []) {
+let watcher;
+function initLibrary(event, songList = [], musicLibraryPaths = []) {
+  console.log("musicLibraryPaths", musicLibraryPaths);
+  if (musicLibraryPaths.length < 1) {
+    logToRenderer(
+      "Music library path array is empty so library can't be initialized."
+    );
+    return;
+  }
+
   const isInitialScan = isEmpty(songList);
   logToRenderer("isInitialScan: " + isInitialScan);
 
@@ -42,7 +48,8 @@ function initLibrary(event, songList = []) {
   const localSongList = [];
   let isInitialized = false;
 
-  const watcher = chokidar.watch(LIBRARY_PATH, {
+  if (watcher) watcher.close();
+  watcher = chokidar.watch(musicLibraryPaths, {
     ignored: /^\./
   });
 
@@ -56,7 +63,7 @@ function initLibrary(event, songList = []) {
 
     if (!isInitialScan) {
       updateDirtySongs(event, Array.from(dirtySongSet.values()));
-      updateLibrary(event, addedSongList, removedSongList);
+      updateLibrary(event, addedSongList, removedSongList, musicLibraryPaths);
     }
 
     event.sender.send(
@@ -92,7 +99,7 @@ function initLibrary(event, songList = []) {
       addedSongs.push([path, statsHash]);
       if (addedSongs.length <= 1) {
         setTimeout(() => {
-          updateLibrary(event, addedSongs, []);
+          updateLibrary(event, addedSongs, [], musicLibraryPaths);
           event.sender.send(
             "updateSongList",
             [
@@ -115,7 +122,7 @@ function initLibrary(event, songList = []) {
     updatedSongs.push([path, getStatsHash(stats)]);
     if (updatedSongs.length <= 1) {
       setTimeout(() => {
-        updateLibrary(event, updatedSongs);
+        updateLibrary(event, updatedSongs, [], musicLibraryPaths);
         event.sender.send(
           "updateSongList",
           [
@@ -137,7 +144,7 @@ function initLibrary(event, songList = []) {
     removedSongs.push([path]);
     if (removedSongs.length <= 1) {
       setTimeout(() => {
-        updateLibrary(event, [], removedSongs);
+        updateLibrary(event, [], removedSongs, musicLibraryPaths);
         event.sender.send(
           "updateSongList",
           songList
@@ -150,34 +157,47 @@ function initLibrary(event, songList = []) {
   });
 }
 
-async function runInitialScan(event) {
+async function runInitialScan(event, musicLibraryPaths) {
+  if (musicLibraryPaths.length < 1) {
+    logToRenderer(
+      "Music library path array is empty so initial scan can't be run."
+    );
+    return;
+  }
+
   const eventName = "libraryListing";
   const msg = INIT;
-  const files = await getArtistFolders();
-  event.sender.send("startInitialScan", files.length);
 
-  let counter = 0;
-  await Promise.all(
-    files.map(async file => {
-      try {
-        // For debugging
-        // require("child_process").fork("./src/scanner.js").send({ msg, payload: file.name });
-        const listing = await Scanner.create({ msg, payload: file.name });
-        counter++;
-        event.sender.send("updateInitialScan", counter);
-        event.sender.send(eventName, listing);
-      } catch (e) {
-        console.error(e);
-        errorToRenderer(e.message);
-      }
-    })
-  );
-  event.sender.send("endInitialScan");
+  for (const path of musicLibraryPaths) {
+    const files = await getArtistFolders(path);
+    event.sender.send("startInitialScan", files.length);
+
+    let counter = 0;
+    await Promise.all(
+      files.map(async file => {
+        try {
+          // For debugging
+          // require("child_process").fork("./src/scanner.js").send({ msg, payload: file.name });
+          const listing = await Scanner.create({
+            msg,
+            payload: { path, folderName: file.name }
+          });
+          counter++;
+          event.sender.send("updateInitialScan", counter);
+          event.sender.send(eventName, listing);
+        } catch (e) {
+          console.error(e);
+          errorToRenderer(e.message);
+        }
+      })
+    );
+    event.sender.send("endInitialScan");
+  }
 }
 
-async function getArtistFolders() {
+async function getArtistFolders(path) {
   return new Promise((resolve, reject) => {
-    fs.readdir(LIBRARY_PATH, { withFileTypes: true }, (err, files) => {
+    fs.readdir(path, { withFileTypes: true }, (err, files) => {
       if (err) reject(err);
       resolve(files.filter(negate(isHiddenFile)));
     });
@@ -189,17 +209,27 @@ function updateDirtySongs(event, dirtySongPaths) {
   runInBackgroud(event, "updateSongMetadata", UPDATE_SONGS, dirtySongPaths);
 }
 
-function updateLibrary(event, updatedSongList = [], removedSongList = []) {
+function updateLibrary(
+  event,
+  updatedSongList = [],
+  removedSongList = [],
+  musicLibraryPaths
+) {
   const hasUpdatedSongs = !isEmpty(updatedSongList);
   const hasDeletedSongs = !isEmpty(removedSongList);
   if (!hasUpdatedSongs && !hasDeletedSongs) return;
 
+  // TODO: cross-platform this and make it better
   const paths = [
     ...updatedSongList
-      .map(s => getArtistPath(s[0], LIBRARY_PATH))
+      .map(s =>
+        getArtistPath(s[0], musicLibraryPaths.find(path => path.includes(s[0])))
+      )
       .map(p => p.split("/").pop()),
     ...removedSongList
-      .map(s => getArtistPath(s[0], LIBRARY_PATH))
+      .map(s =>
+        getArtistPath(s[0], musicLibraryPaths.find(path => path.includes(s[0])))
+      )
       .map(p => p.split("/").pop())
   ];
 

@@ -2,8 +2,9 @@
 "use strict";
 
 const path = require("path");
-const { app, BrowserWindow, ipcMain, Menu } = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, dialog } = require("electron");
 const { init, initLibrary, runInitialScan } = require("./library");
+const { isUndefined } = require("lodash");
 
 let mainWindow;
 
@@ -151,3 +152,10 @@ app.on("activate", function() {
 
 ipcMain.on("initLibrary", initLibrary);
 ipcMain.on("runInitialScan", runInitialScan);
+
+ipcMain.on("addMusicLibraryPath", event => {
+  dialog.showOpenDialog({ properties: ["openDirectory"] }, paths => {
+    if (isUndefined(paths)) return;
+    event.sender.send("addMusicLibraryPath", paths[0]);
+  });
+});
