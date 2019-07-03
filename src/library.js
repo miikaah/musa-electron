@@ -36,8 +36,12 @@ function init(_window) {
 }
 
 let watcher
-function initLibrary(event, songList = [], musicLibraryPaths = []) {
-  console.log("musicLibraryPaths", musicLibraryPaths)
+function initLibrary(
+  event,
+  songList = [],
+  musicLibraryPaths = [],
+  deletedLibraryPath
+) {
   if (musicLibraryPaths.length < 1) {
     logToRenderer(
       "Music library path array is empty so library can't be initialized."
@@ -78,7 +82,8 @@ function initLibrary(event, songList = [], musicLibraryPaths = []) {
           ...Array.from(dirtySongSet.values()).map(path => [path])
         ],
         removedSongList,
-        musicLibraryPaths
+        musicLibraryPaths,
+        deletedLibraryPath
       )
     }
 
@@ -225,20 +230,26 @@ function updateLibrary(
   event,
   updatedSongList = [],
   removedSongList = [],
-  musicLibraryPaths
+  musicLibraryPaths,
+  deletedLibraryPath
 ) {
   const hasUpdatedSongs = !isEmpty(updatedSongList)
-  console.log(hasUpdatedSongs)
   const hasDeletedSongs = !isEmpty(removedSongList)
   if (!hasUpdatedSongs && !hasDeletedSongs) return
 
   // TODO: cross-platform this and make it better
   const paths = [...updatedSongList, ...removedSongList].map(p => p[0])
-  console.log("-----paths-----")
-  console.log(paths)
-  console.log("-----paths-----")
 
   const pathsByLibrary = getArtistFolderNamesByLibrary(paths, musicLibraryPaths)
+
+  // A complete library has been removed in UI
+  if (isEmpty(pathsByLibrary) && !isEmpty(deletedLibraryPath)) {
+    const artistPaths = getArtistPaths(paths, deletedLibraryPath)
+    artistPaths.forEach(path =>
+      event.sender.send("deleteLibraryListings", path)
+    )
+    return
+  }
 
   if (hasUpdatedSongs || hasDeletedSongs) {
     pathsByLibrary.forEach(obj => {
@@ -258,6 +269,17 @@ function updateLibrary(
       )
     })
   }
+}
+
+function getArtistPaths(paths, libraryPath) {
+  const libPath = join(libraryPath, sep)
+  return Array.from(
+    new Set(
+      paths
+        .filter(p => startsWith(p, libraryPath))
+        .map(p => join(libPath, p.split(libPath)[1].split(sep)[0]))
+    )
+  )
 }
 
 function getArtistFolderNamesByLibrary(paths, musicLibraryPaths) {
@@ -285,9 +307,7 @@ function runInBackgroud(event, eventName, msg, payload) {
 async function runInHiddenBrowserWindow(event, eventName, msg, payload) {
   try {
     const results = await Scanner.create({ msg, payload })
-    console.log("--------results--------")
-    console.log(results)
-    console.log("--------results--------")
+
     if (!Array.isArray(results)) {
       console.error("Scanner returned incorrect data ", results)
       errorToRenderer(
@@ -295,6 +315,7 @@ async function runInHiddenBrowserWindow(event, eventName, msg, payload) {
       )
       return
     }
+
     logToRenderer("Scanner result length: " + results.length)
     results.forEach(result => event.sender.send(eventName, result))
   } catch (e) {
