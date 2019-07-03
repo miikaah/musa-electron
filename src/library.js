@@ -165,34 +165,35 @@ async function runInitialScan(event, musicLibraryPaths) {
     return;
   }
 
-  const eventName = "libraryListing";
   const msg = INIT;
+  const allFiles = await Promise.all(musicLibraryPaths.map(getArtistFolders));
+  const allFilesLength = allFiles.reduce((sum, files) => sum + files.length, 0);
 
-  for (const path of musicLibraryPaths) {
-    const files = await getArtistFolders(path);
-    event.sender.send("startInitialScan", files.length);
-
-    let counter = 0;
-    await Promise.all(
-      files.map(async file => {
-        try {
-          // For debugging
-          // require("child_process").fork("./src/scanner.js").send({ msg, payload: file.name });
-          const listing = await Scanner.create({
-            msg,
-            payload: { path, folderName: file.name }
-          });
-          counter++;
-          event.sender.send("updateInitialScan", counter);
-          event.sender.send(eventName, listing);
-        } catch (e) {
-          console.error(e);
-          errorToRenderer(e.message);
-        }
-      })
-    );
-    event.sender.send("endInitialScan");
-  }
+  let counter = 0;
+  event.sender.send("startInitialScan", allFilesLength);
+  await Promise.all(
+    musicLibraryPaths.map(async (path, i) => {
+      await Promise.all(
+        allFiles[i].map(async file => {
+          try {
+            // For debugging
+            // require("child_process").fork("./src/scanner.js").send({ msg, payload: file.name });
+            const listing = await Scanner.create({
+              msg,
+              payload: { path, folderName: file.name }
+            });
+            counter++;
+            event.sender.send("updateInitialScan", counter);
+            event.sender.send("libraryListing", listing);
+          } catch (e) {
+            console.error(e);
+            errorToRenderer(e.message);
+          }
+        })
+      );
+    })
+  );
+  event.sender.send("endInitialScan");
 }
 
 async function getArtistFolders(path) {
