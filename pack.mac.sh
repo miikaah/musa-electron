@@ -1,7 +1,4 @@
 #!/bin/bash
-FRONTEND_DIR="/Users/miika.henttonen/repos/musa"
-BACKEND_DIR="/Users/miika.henttonen/repos/musa-electron"
-
 echo "Building Musa frontend..."
 cd $FRONTEND_DIR
 npm run build
