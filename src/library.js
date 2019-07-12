@@ -98,6 +98,9 @@ function initLibrary(
     )
   }
 
+  // Updates library when last library folder is removed in UI,
+  // because "ready" event is NOT fired by chokidar if it's
+  // given an empty array to watch
   if (isEmpty(musicLibraryPaths)) updateAfterReady()
 
   // Initial check completed, now handle the songs
