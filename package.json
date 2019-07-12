@@ -6,7 +6,7 @@
   "main": "src/index.js",
   "scripts": {
     "setup": "npm i && electron-rebuild",
-    "start": "nodemon --watch ./src --exec IS_DEV=true electron .",
+    "start": "nodemon --watch ./src --exec dotenv electron .",
     "test": "jest --coverage",
     "test:w": "jest --coverage --watch",
     "package:mac": "electron-packager . --overwrite --platform=darwin --arch=x64 --icon=assets/icons/musa1024x1024.icns --prune=true --out=release-builds",
