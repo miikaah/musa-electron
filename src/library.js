@@ -53,7 +53,7 @@ function initLibrary(
   const isInitialScan = isEmpty(songList)
   logToRenderer("isInitialScan: " + isInitialScan)
 
-  if (isInitialScan) runInitialScan(event)
+  if (isInitialScan) runInitialScan(event, musicLibraryPaths)
 
   const dirtySongList = []
   const dirtySongSet = new Set()

@@ -160,7 +160,7 @@ app.on("activate", function() {
 ipcMain.on("initLibrary", initLibrary)
 ipcMain.on("runInitialScan", runInitialScan)
 
-ipcMain.on("addMusicLibraryPath", (event, songList, libPaths) => {
+ipcMain.on("addMusicLibraryPath", (event, songList, libPaths = []) => {
   dialog.showOpenDialog({ properties: ["openDirectory"] }, paths => {
     if (isUndefined(paths)) return
     const newPath = paths[0]
