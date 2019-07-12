@@ -43,7 +43,11 @@ function initLibrary(
   musicLibraryPaths = [],
   deletedLibraryPath
 ) {
-  if (musicLibraryPaths.length < 1) {
+  console.log("----musicLibraryPaths----")
+  console.log(musicLibraryPaths)
+  console.log("----deletedLibraryPath----")
+  console.log(deletedLibraryPath)
+  if (musicLibraryPaths.length < 1 && isEmpty(deletedLibraryPath)) {
     logToRenderer(
       "Music library path array is empty so library can't be initialized."
     )
@@ -66,15 +70,15 @@ function initLibrary(
     ignored: /^\./
   })
 
-  // Initial check completed, now handle the songs
-  // that have changed while the program has not been running
-  watcher.on("ready", () => {
+  const updateAfterReady = () => {
     isInitialized = true
     // s[0] is the file path
     const addedSongList = differenceBy(localSongList, songList, s => s[0])
     const removedSongList = differenceBy(songList, localSongList, s => s[0])
     const removedSongSet = new Set(removedSongList.map(s => s[0]))
 
+    console.log("-----removedSongList----")
+    console.log(removedSongList)
     if (!isInitialScan) {
       updateLibrary(
         event,
@@ -98,7 +102,13 @@ function initLibrary(
         .filter(song => !removedSongSet.has(song[0]))
         .sort((a, b) => a[0].localeCompare(b[0]))
     )
-  })
+  }
+
+  if (isEmpty(musicLibraryPaths)) updateAfterReady()
+
+  // Initial check completed, now handle the songs
+  // that have changed while the program has not been running
+  watcher.on("ready", updateAfterReady)
 
   // WATCHERS
 
@@ -244,6 +254,7 @@ function updateLibrary(
   const pathsByLibrary = getArtistFolderNamesByLibrary(paths, musicLibraryPaths)
 
   // A complete library has been removed in UI
+  console.log(isEmpty(pathsByLibrary), !isEmpty(deletedLibraryPath))
   if (isEmpty(pathsByLibrary) && !isEmpty(deletedLibraryPath)) {
     const artistPaths = getArtistPaths(paths, deletedLibraryPath)
     artistPaths.forEach(path =>
