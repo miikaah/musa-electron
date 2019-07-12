@@ -7,7 +7,8 @@ const {
   isUndefined,
   differenceBy,
   startsWith,
-  flatten
+  flatten,
+  defaultTo
 } = require("lodash")
 const { isWatchableFile, isHiddenFile } = require("./util")
 const {
@@ -90,7 +91,7 @@ function initLibrary(
     event.sender.send(
       "updateSongList",
       [
-        ...songList.filter(song => !dirtySongSet.has(song[0])),
+        ...defaultTo(songList, []).filter(song => !dirtySongSet.has(song[0])),
         ...dirtySongList,
         ...addedSongList
       ]
@@ -124,7 +125,7 @@ function initLibrary(
           event.sender.send(
             "updateSongList",
             [
-              ...songList.filter(
+              ...defaultTo(songList, []).filter(
                 song => !addedSongs.map(s => s[0]).includes(song[0])
               ),
               ...addedSongs
@@ -147,7 +148,7 @@ function initLibrary(
         event.sender.send(
           "updateSongList",
           [
-            ...songList.filter(
+            ...defaultTo(songList, []).filter(
               song => !updatedSongs.map(s => s[0]).includes(song[0])
             ),
             ...updatedSongs
@@ -178,7 +179,7 @@ function initLibrary(
   })
 }
 
-async function runInitialScan(event, musicLibraryPaths) {
+async function runInitialScan(event, musicLibraryPaths = []) {
   if (musicLibraryPaths.length < 1) {
     logToRenderer(
       "Music library path array is empty so initial scan can't be run."

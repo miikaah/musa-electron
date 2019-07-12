@@ -24,7 +24,7 @@ function createWindow() {
             : biggestDisplay)
     )
   }
-  const getWebPreferences = () => {
+  const getWebPreferencesByEnv = () => {
     return process.env.IS_DEV
       ? {
           nodeIntegration: true,
@@ -41,7 +41,10 @@ function createWindow() {
     y: biggestDisplay.bounds.y,
     width: 1600,
     height: 1000,
-    webPreferences: getWebPreferences()
+    webPreferences: {
+      backgroundColor: "#21252b",
+      ...getWebPreferencesByEnv()
+    }
   })
 
   const getURL = () => {
@@ -125,6 +128,10 @@ function createWindow() {
 
   init(mainWindow)
 }
+
+// Enables overlay scrollbar in Windows
+app.commandLine.appendSwitch("--enable-features", "OverlayScrollbar")
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
