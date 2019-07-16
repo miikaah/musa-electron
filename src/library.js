@@ -205,15 +205,27 @@ async function runInitialScan(event, musicLibraryPaths = []) {
       await Promise.all(
         allFiles[i].map(async file => {
           try {
-            // For debugging
-            // require("child_process").fork("./src/scanner.js").send({ msg, payload: file.name });
             const listing = await Scanner.create({
               msg,
               payload: { path, folderName: file.name }
             })
             counter++
-            event.sender.send("updateInitialScan", counter)
             event.sender.send("libraryListing", listing)
+            event.sender.send("updateInitialScan", counter)
+            // For debugging
+            // const child = require("child_process")
+            //   .fork("./src/scanner.js")
+            // child.send({
+            //   msg,
+            //   payload: { path, folderName: file.name }
+            // });
+            // // This callback breaks progress bar in frontend
+            // child.on('message', msg => {
+            //   const listing = JSON.parse(msg)
+            //   counter++
+            //   event.sender.send("libraryListing", listing)
+            //   event.sender.send("updateInitialScan", counter)
+            // })
           } catch (e) {
             console.error(e)
             errorToRenderer(e.message)
