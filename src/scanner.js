@@ -4,7 +4,6 @@ const { parse, join, sep } = require("path")
 const {
   negate,
   defaultTo,
-  omit,
   get,
   isUndefined,
   flatten,
@@ -16,49 +15,45 @@ const { isSupportedFileType, isHiddenFile } = require("./util")
 const Bottleneck = require("bottleneck")
 
 const INIT = "INIT"
-const UPDATE_SONGS = "UPDATE_SONGS"
 const UPDATE_LIBRARY_LISTINGS = "UPDATE_LIBRARY_LISTINGS"
-const DELETE_LIBRARY_LISTINGS = "DELETE_LIBRARY_LISTINGS"
 
 const bottleneck = new Bottleneck({ maxConcurrent: 12 })
 
 async function create(obj) {
   switch (obj.msg) {
     case INIT:
-      return init(obj.payload)
     case UPDATE_LIBRARY_LISTINGS:
-      return updateLibraryByPaths(
-        obj.payload.libraryPath,
-        new Set(obj.payload.paths)
-      )
-    case DELETE_LIBRARY_LISTINGS:
-      return deleteLibraryListings(
-        obj.payload.libraryPath,
-        new Set(obj.payload.paths)
-      )
+      return init(obj.payload)
     default:
       return
   }
 }
 
 async function init({ path, folderName }) {
-  return scanArtistFolder(join(path, folderName), folderName)
+  return scanArtistFolder(path, folderName)
 }
 
 // For debugging
 process.on("message", async msg => {
-  process.send(JSON.stringify(await create(msg)))
+  try {
+    const result = await create(msg)
+    process.send(JSON.stringify(result))
+  } catch (e) {
+    console.error("DEBUG", e)
+    process.send(JSON.stringify(e))
+  }
 })
 
 async function scanArtistFolder(path, folderName) {
   return new Promise((resolve, reject) => {
     fs.readdir(path, { withFileTypes: true }, async (err, files) => {
-      if (err) reject(err)
+      if (err) return reject(err)
+
       const albums = await scanAlbumFolder(
         path,
-        files.filter(negate(isHiddenFile)),
-        folderName
+        files.filter(negate(isHiddenFile))
       )
+
       const songs = files
         .filter(file => !file.isDirectory())
         .filter(negate(isHiddenFile))
@@ -67,6 +62,7 @@ async function scanArtistFolder(path, folderName) {
           path: join(path, file.name)
         }))
         .filter(song => isSupportedFileType(song.path))
+
       const songsWithMetadata = await getSongsWithMetadata(songs)
       const emptyAlbum = {
         date: "2525",
@@ -74,6 +70,7 @@ async function scanArtistFolder(path, folderName) {
         name: "undefined",
         songs: songsWithMetadata
       }
+
       resolve({
         name: folderName,
         path,
@@ -86,71 +83,9 @@ async function scanArtistFolder(path, folderName) {
   })
 }
 
-async function updateLibraryByPaths(libraryPath, pathsSet) {
-  return new Promise((resolve, reject) => {
-    fs.readdir(libraryPath, { withFileTypes: true }, (err, files) => {
-      if (err) reject(err)
-      const filesToUpdate = files.filter(file => pathsSet.has(file.name))
-      resolve(
-        buildLibraryListing(
-          libraryPath,
-          filesToUpdate.filter(negate(isHiddenFile))
-        )
-      )
-    })
-  })
-}
-
-async function deleteLibraryListings(libraryPath, pathsSet) {
-  return new Promise((resolve, reject) => {
-    fs.readdir(libraryPath, { withFileTypes: true }, (err, files) => {
-      if (err) reject(err)
-      // Find deleted folders
-      const deletedFolders = []
-      const filesSet = new Set(files.map(file => file.name))
-      pathsSet.forEach(folderName => {
-        if (!filesSet.has(folderName)) deletedFolders.push(folderName)
-      })
-      resolve(deletedFolders.map(folderName => join(libraryPath, folderName)))
-    })
-  })
-}
-
-async function buildLibraryListing(path, files) {
-  return new Promise(async (resolve, reject) => {
-    if (files.length < 1) return []
-    const library = []
-    try {
-      await Promise.all(
-        files.map(async file => {
-          const artist = await bottleneck.schedule(async () => {
-            const parent = {
-              name: file.name,
-              path: join(path, file.name),
-              songs: []
-            }
-            const listing = await getDirStructureForSubDir(file, path, parent)
-            if (!listing.songs) return
-            listing.albums = await getAlbumsBySongs(
-              listing.songs.filter(song => isSupportedFileType(song.path))
-            )
-            return listing
-          })
-          if (artist) {
-            library.push(omit(artist, ["songs"]))
-          }
-        })
-      )
-      resolve(library)
-    } catch (e) {
-      reject(e)
-    }
-  })
-}
-
 async function scanAlbumFolder(path, files) {
   return new Promise(async (resolve, reject) => {
-    if (files.length < 1) return []
+    if (files.length < 1) return resolve([])
     const allSongs = []
     try {
       await Promise.all(
@@ -173,6 +108,7 @@ async function scanAlbumFolder(path, files) {
         )
       )
     } catch (e) {
+      console.error("(scanAlbumFolder)", e)
       reject(e)
     }
   })
@@ -214,13 +150,14 @@ async function getSongsWithMetadata(songs) {
 // and then those folders are combined together to form
 // singular albums from multiple directories.
 //
-// E.g. if dir A is a double album that has 2 discs
-// it's assumed those discs are in their own directories.
+// *  if dir A is a double album that has 2 discs
+//    it's assumed those discs might be in their own directories.
 //
-// It also works with A single album that has a subdirectory.
+// *  It also works with a single album that has a subdirectory.
 //
-// The album covers are looked for first in the album ROOT dir
-// and afterwards greedily from any subdirectories.
+// *  The album covers are looked for first in the album ROOT dir
+//    and afterwards greedily from any subdirectories.
+//
 async function getAlbumsBySongs(songs, path) {
   const songsWithMetadata = await getSongsWithMetadata(songs)
   const albums = reduceSongsToAlbumsByPath(songsWithMetadata)
@@ -368,9 +305,7 @@ function getPathThatEndsWithSep(path) {
 
 module.exports = {
   INIT,
-  UPDATE_SONGS,
   UPDATE_LIBRARY_LISTINGS,
-  DELETE_LIBRARY_LISTINGS,
   create,
   init
 }

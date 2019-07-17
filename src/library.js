@@ -6,16 +6,11 @@ const {
   pick,
   isUndefined,
   differenceBy,
-  startsWith,
-  flatten,
-  defaultTo
+  defaultTo,
+  uniq
 } = require("lodash")
 const { isWatchableFile, isHiddenFile } = require("./util")
-const {
-  INIT,
-  UPDATE_LIBRARY_LISTINGS,
-  DELETE_LIBRARY_LISTINGS
-} = require("./scanner")
+const { INIT, UPDATE_LIBRARY_LISTINGS } = require("./scanner")
 const { requireTaskPool } = require("electron-remote")
 const fs = require("fs")
 const { join, sep } = require("path")
@@ -207,7 +202,7 @@ async function runInitialScan(event, musicLibraryPaths = []) {
           try {
             const listing = await Scanner.create({
               msg,
-              payload: { path, folderName: file.name }
+              payload: { path: join(path, file.name), folderName: file.name }
             })
             counter++
             event.sender.send("libraryListing", listing)
@@ -246,7 +241,7 @@ async function getArtistFolders(path) {
   })
 }
 
-function updateLibrary(
+async function updateLibrary(
   event,
   updatedSongList = [],
   removedSongList = [],
@@ -257,95 +252,115 @@ function updateLibrary(
   const hasDeletedSongs = !isEmpty(removedSongList)
   if (!hasUpdatedSongs && !hasDeletedSongs) return
 
-  // TODO: cross-platform this and make it better
-  const paths = [...updatedSongList, ...removedSongList].map(p => p[0])
-
-  const pathsByLibrary = getArtistFolderNamesByLibrary(paths, musicLibraryPaths)
+  const paths = uniq([...updatedSongList, ...removedSongList].map(p => p[0]))
 
   // A complete library has been removed in UI
-  if (isEmpty(pathsByLibrary) && !isEmpty(deletedLibraryPath)) {
-    const artistPaths = getArtistPaths(paths, deletedLibraryPath)
-    artistPaths.forEach(path =>
-      event.sender.send("deleteLibraryListings", path)
-    )
+  if (!isEmpty(deletedLibraryPath)) {
+    const artistPaths = getUniqArtistPaths(paths, [deletedLibraryPath])
+    artistPaths.forEach(path => event.sender.send("deleteLibraryListing", path))
     return
   }
 
-  if (hasUpdatedSongs || hasDeletedSongs) {
-    pathsByLibrary.forEach(obj => {
-      const payload = { libraryPath: obj.libraryPath, paths: obj.paths }
-      runInBackgroud(event, "libraryListing", UPDATE_LIBRARY_LISTINGS, payload)
+  // The following block updates and deletes library listings.
+  // Because WINDOWS handles files differently, it's done like so:
+  //
+  // *  Updates & deletions to files inside ROOT folders
+  //    is done as a simple update. The whole ROOT folder is always scanned
+  //    so changes are easy to detect.
+  //.
+  // *  Runtime deletion is detected as Scanner returning
+  //    an empty result.albums Array [].
+  //    Deletion message is dispatched to frontend.
+  //    WINDOWS (for some reason) doesn't delete the ROOT folder
+  //    if the executable is running.
+  //
+  // *  Deletion of a ROOT folder when the executable is not running
+  //    is detected by the Scanner returning an ENOENT code in an Error.
+  //    As scanning is based on ROOT folders this is assumed to mean
+  //    that a ROOT folder has been deleted and a deletion message
+  //    is dispatched to the frontend.
+  //
+
+  const artistPaths = getUniqArtistPaths(paths, musicLibraryPaths)
+
+  await Promise.all(
+    artistPaths.map(path => {
+      const libraryPath = getLibraryPathFromPath(path, musicLibraryPaths)
+      return runInBackgroud(event, "libraryListing", UPDATE_LIBRARY_LISTINGS, {
+        path,
+        folderName: path.replace(libraryPath, "").split(sep)[1]
+      })
     })
-  }
-  // Deletes complete artist folders if necessary
-  if (hasDeletedSongs) {
-    pathsByLibrary.forEach(obj => {
-      const payload = { libraryPath: obj.libraryPath, paths: obj.paths }
-      runInBackgroud(
-        event,
-        "deleteLibraryListings",
-        DELETE_LIBRARY_LISTINGS,
-        payload
-      )
-    })
-  }
+  )
 }
 
-function getArtistPaths(paths, libraryPath) {
-  const libPath = join(libraryPath, sep)
+function getUniqArtistPaths(paths, musicLibraryPaths) {
   return Array.from(
     new Set(
-      paths
-        .filter(p => startsWith(p, libraryPath))
-        .map(p => join(libPath, p.split(libPath)[1].split(sep)[0]))
+      paths.map(path => {
+        const libraryPath = getLibraryPathFromPath(path, musicLibraryPaths)
+        return join(libraryPath, path.replace(libraryPath, "").split(sep)[1])
+      })
     )
   )
 }
 
-function getArtistFolderNamesByLibrary(paths, musicLibraryPaths) {
-  const pathsByLibrary = musicLibraryPaths
-    .map(p => join(p, sep))
-    .map(libraryPath => ({
-      libraryPath,
-      paths: paths
-        .filter(p => startsWith(p, libraryPath))
-        .map(p => p.split(libraryPath)[1].split(sep)[0])
-    }))
-    .filter(obj => !isEmpty(obj.paths))
-  return flatten(pathsByLibrary)
+function getLibraryPathFromPath(path, musicLibraryPaths) {
+  return musicLibraryPaths.find(p => path.includes(join(p, sep)))
 }
 
-function runInBackgroud(event, eventName, msg, payload) {
+async function runInBackgroud(event, eventName, msg, payload) {
+  return runInHiddenBrowserWindow(event, eventName, msg, payload)
+
   // For debugging
-  // if (process.env.IS_DEV) {
-  //   require("child_process").fork("./src/scanner.js").send({ msg, payload });
-  //   return;
-  // }
-  runInHiddenBrowserWindow(event, eventName, msg, payload)
+  // return new Promise((resolve) => {
+  //   const child = require("child_process").fork("./src/scanner.js")
+  //   child.send({ msg, payload });
+  //   // This callback breaks progress bar in frontend
+  //   child.on('message', msg => {
+  //     const result = JSON.parse(msg)
+  //
+  //     if (isNonExistantArtist(result) || isRuntimeArtistDeletion(result)) {
+  //       event.sender.send("deleteLibraryListing", payload.path)
+  //       return resolve(result)
+  //     }
+  //
+  //     event.sender.send(eventName, result)
+  //     resolve(result)
+  //   })
+  // })
 }
 
 async function runInHiddenBrowserWindow(event, eventName, msg, payload) {
-  try {
-    const results = await Scanner.create({ msg, payload })
+  return new Promise(async (resolve, reject) => {
+    try {
+      const result = await Scanner.create({ msg, payload })
 
-    if (!Array.isArray(results)) {
-      console.error("Scanner returned incorrect data ", results)
-      errorToRenderer(
-        "Scanner returned incorrect data " + JSON.stringify(results)
-      )
-      return
+      if (isNonExistantArtist(result) || isRuntimeArtistDeletion(result)) {
+        event.sender.send("deleteLibraryListing", payload.path)
+        return resolve(result)
+      }
+
+      event.sender.send(eventName, result)
+      return resolve(result)
+    } catch (e) {
+      console.error(e)
+      errorToRenderer(e)
+      reject(e)
     }
-
-    logToRenderer("Scanner result length: " + results.length)
-    results.forEach(result => event.sender.send(eventName, result))
-  } catch (e) {
-    console.error(e)
-    errorToRenderer(e)
-  }
+  })
 }
 
 function getStatsHash(stats) {
   return hash(pick(stats, ["mtime", "ctime", "birthtime"]))
+}
+
+function isNonExistantArtist(result) {
+  return result && !isEmpty(result.code) && result.code === "ENOENT"
+}
+
+function isRuntimeArtistDeletion(result) {
+  return result && isEmpty(result.albums)
 }
 
 module.exports = {
