@@ -49,7 +49,7 @@ function createWindow() {
 
   const getURL = () => {
     return process.env.IS_DEV
-      ? "http://localhost:3000"
+      ? "http://localhost:3666"
       : `file://${path.join(__dirname, "../build/index.html")}`;
   };
   // and load the index.html of the app.
