@@ -14,9 +14,11 @@ it reverts back to polling on Mac which causes huge performance issues by hoggin
 _Note: requires a Spotify Premium account_
 
 Register an app to your Spotify account
-https://developer.spotify.com/documentation/general/guides/app-settings/#register-your-app
+https://developer.spotify.com/documentation/general/guides/app-settings/#register-your-app.
 
-Set your Spotify client id and client secret to `.env`
+Add the localhost and file urls as redirect uris by editing the app settings.
+
+Set your Spotify client id and client secret to `.env`.
 
 ```
 SPOTIFY_CLIENT_ID=id
