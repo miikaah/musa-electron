@@ -9,6 +9,20 @@ Run `npm run setup` to install packages and to rebuild fsevents.
 This is needed because this package uses Chokidar and without rebuilding fsevents,
 it reverts back to polling on Mac which causes huge performance issues by hogging a lot of CPU.
 
+## Enabling Spotify integration
+
+_Note: requires a Spotify Premium account_
+
+Register an app to your Spotify account
+https://developer.spotify.com/documentation/general/guides/app-settings/#register-your-app
+
+Set your Spotify client id and client secret to `.env`
+
+```
+SPOTIFY_CLIENT_ID=id
+SPOTIFY_CLIENT_SECRET=secret
+```
+
 ## Packaging the app
 
 Clone `https://github.com/miikaah/musa` to its own directory.
