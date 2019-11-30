@@ -37,6 +37,9 @@ const SPOTIFY_AUTH_BASE64 = Buffer.from(
 ).toString("base64");
 const SPOTIFY_BASIC_AUTH_HEADER = `Basic ${SPOTIFY_AUTH_BASE64}`;
 const SPOTIFY_AUTHORIZE_URL = `https://accounts.spotify.com/authorize?client_id=${SPOTIFY_CLIENT_ID}&response_type=code&redirect_uri=${getUrl()}&scope=${SPOTIFY_SCOPES}`;
+const SPOTIFY_PLAYER_BASE = "https://api.spotify.com/v1/me/player";
+const hasSpotifyCredentials =
+  !isUndefined(SPOTIFY_CLIENT_ID) && !isUndefined(SPOTIFY_CLIENT_SECRET);
 
 let mainWindow;
 
@@ -79,7 +82,7 @@ function createWindow() {
     }
   });
   // and load the index.html of the app.
-  mainWindow.loadURL(SPOTIFY_AUTHORIZE_URL);
+  mainWindow.loadURL(hasSpotifyCredentials ? SPOTIFY_AUTHORIZE_URL : getUrl());
 
   if (process.env.IS_DEV) mainWindow.webContents.openDevTools();
 
@@ -224,8 +227,6 @@ ipcMain.on("fetchSpotifyTokens", async (event, codeOrToken, grantType) => {
   );
   event.sender.send("gotSpotifyTokens", tokens, tokens.refreshToken);
 });
-
-const SPOTIFY_PLAYER_BASE = "https://api.spotify.com/v1/me/player";
 
 const playOrPause = async (method, token) => {
   const res = await fetch(`${SPOTIFY_PLAYER_BASE}/${method}`, {
