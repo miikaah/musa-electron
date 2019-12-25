@@ -51,7 +51,7 @@ const fetchTokens = async (event, codeOrToken, grantType) => {
 let retries = 0;
 
 const refreshTokensAndRetry = async (event, callback, params) => {
-  if (!tokensCache || retries > 1) {
+  if (!tokensCache || retries > 0) {
     retries = 0;
     event.sender.send("SpotifyNotWorking");
     return;
@@ -85,42 +85,47 @@ const dispatchPlayerAction = async (event, token, method) => {
   }
 };
 
-const play = (event, token) => dispatchPlayerAction(event, token, "play");
-const pause = (event, token) => dispatchPlayerAction(event, token, "pause");
+const play = (token, event) => dispatchPlayerAction(event, token, "play");
+const pause = (token, event) => dispatchPlayerAction(event, token, "pause");
 
-const SPOTIFY_SEARCH_BASE = `${SPOTIFY_BASE}/search`;
-
-const search = async (event, token, query) => {
-  if (!query) return;
-  const fetchQuery = `?q="${query}"&limit=10&type=album,artist,track&market=from_token`;
-
-  const res = await fetch(`${SPOTIFY_SEARCH_BASE}${fetchQuery}`, {
+const get = async (event, token, url) => {
+  const res = await fetch(url, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`
     }
   });
 
-  console.log(res.status, new Date().toISOString(), query);
+  console.log(res.status, new Date().toISOString(), url);
 
   if (!res.ok) {
-    console.error("Spotify search failed", res);
+    console.error("Spotify GET failed", res);
     if (res.status === 401) {
-      await refreshTokensAndRetry(event, search, [
-        tokensCache.accessToken,
-        query
-      ]);
+      await refreshTokensAndRetry(event, get, [tokensCache.accessToken, url]);
     }
     return;
   }
+  return res.json();
+};
 
-  const results = await res.json();
-  event.sender.send("GotSpotifySearchResults", results);
+const SPOTIFY_SEARCH_BASE = `${SPOTIFY_BASE}/search`;
+
+const search = async (token, query, event) => {
+  if (!query) return;
+  const fetchQuery = `?q="${query}"&limit=10&type=album,artist,track&market=from_token`;
+  return get(event, token, `${SPOTIFY_SEARCH_BASE}${fetchQuery}`);
+};
+
+const SPOTIFY_ALBUMS_BASE = `${SPOTIFY_BASE}/albums`;
+
+const getAlbumsTracks = async (token, item, event) => {
+  return get(event, token, `${SPOTIFY_ALBUMS_BASE}/${item.id}/tracks`);
 };
 
 module.exports = {
   fetchTokens,
   play,
   pause,
-  search
+  search,
+  getAlbumsTracks
 };
