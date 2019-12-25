@@ -44,7 +44,8 @@ const fetchSpotifyTokens = async (event, codeOrToken, grantType) => {
   event.sender.send("gotSpotifyTokens", tokens, tokens.refreshToken);
 };
 
-const SPOTIFY_PLAYER_BASE = "https://api.spotify.com/v1/me/player";
+const SPOTIFY_BASE = "https://api.spotify.com/v1";
+const SPOTIFY_PLAYER_BASE = `${SPOTIFY_BASE}/me/player`;
 
 const dispatchPlayerAction = async (method, token) => {
   const res = await fetch(`${SPOTIFY_PLAYER_BASE}/${method}`, {
@@ -62,8 +63,31 @@ const dispatchPlayerAction = async (method, token) => {
 const play = (event, token) => dispatchPlayerAction("play", token);
 const pause = (event, token) => dispatchPlayerAction("pause", token);
 
+const SPOTIFY_SEARCH_BASE = `${SPOTIFY_BASE}/search`;
+
+const search = async (event, token, query) => {
+  if (!query) return;
+  const fetchQuery = `?q="${query}"&limit=10&type=album,artist,track&market=from_token`;
+
+  const res = await fetch(`${SPOTIFY_SEARCH_BASE}${fetchQuery}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  if (!res.ok) {
+    console.error("Spotify search failed", res);
+    return;
+  }
+
+  const result = await res.json();
+  event.sender.send("gotSpotifySearchResults", result);
+};
+
 module.exports = {
   fetchSpotifyTokens,
   play,
-  pause
+  pause,
+  search
 };
