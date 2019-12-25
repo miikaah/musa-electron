@@ -11,7 +11,10 @@ const SPOTIFY_AUTH_BASE64 = Buffer.from(
 ).toString("base64");
 const SPOTIFY_BASIC_AUTH_HEADER = `Basic ${SPOTIFY_AUTH_BASE64}`;
 
+let spotifyTokensCache;
+
 const fetchSpotifyTokens = async (event, codeOrToken, grantType) => {
+  console.log(`Fetching spotify tokens (grant type: ${grantType})`);
   const params = new URLSearchParams();
   params.append("grant_type", grantType);
   params.append("redirect_uri", getUrl());
@@ -41,13 +44,33 @@ const fetchSpotifyTokens = async (event, codeOrToken, grantType) => {
     },
     camelCase
   );
+  spotifyTokensCache = { ...tokens };
   event.sender.send("gotSpotifyTokens", tokens, tokens.refreshToken);
+};
+
+let retries = 0;
+
+const refreshTokensAndRetry = async (event, callback, params) => {
+  if (!spotifyTokensCache || retries > 1) {
+    retries = 0;
+    event.sender.send("spotifyNotWorking");
+    return;
+  }
+  retries++;
+  console.log(`Attempting spotify tokens refresh (times: ${retries})`);
+  console.log(spotifyTokensCache);
+  await fetchSpotifyTokens(
+    event,
+    spotifyTokensCache.refreshToken,
+    "refresh_token"
+  );
+  await callback(event, ...params);
 };
 
 const SPOTIFY_BASE = "https://api.spotify.com/v1";
 const SPOTIFY_PLAYER_BASE = `${SPOTIFY_BASE}/me/player`;
 
-const dispatchPlayerAction = async (method, token) => {
+const dispatchPlayerAction = async (event, token, method) => {
   const res = await fetch(`${SPOTIFY_PLAYER_BASE}/${method}`, {
     method: "PUT",
     headers: {
@@ -56,12 +79,18 @@ const dispatchPlayerAction = async (method, token) => {
   });
   if (!res.ok) {
     console.error(`Spotify ${method} failed`, res);
+    if (res.status === 401) {
+      await refreshTokensAndRetry(event, dispatchPlayerAction, [
+        spotifyTokensCache.accessToken,
+        method
+      ]);
+    }
     return;
   }
 };
 
-const play = (event, token) => dispatchPlayerAction("play", token);
-const pause = (event, token) => dispatchPlayerAction("pause", token);
+const play = (event, token) => dispatchPlayerAction(event, token, "play");
+const pause = (event, token) => dispatchPlayerAction(event, token, "pause");
 
 const SPOTIFY_SEARCH_BASE = `${SPOTIFY_BASE}/search`;
 
@@ -76,8 +105,16 @@ const search = async (event, token, query) => {
     }
   });
 
+  console.log(res.status, new Date().toISOString(), query);
+
   if (!res.ok) {
     console.error("Spotify search failed", res);
+    if (res.status === 401) {
+      await refreshTokensAndRetry(event, search, [
+        spotifyTokensCache.accessToken,
+        query
+      ]);
+    }
     return;
   }
 
