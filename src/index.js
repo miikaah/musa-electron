@@ -5,7 +5,7 @@ const { app, BrowserWindow, ipcMain, Menu, dialog } = require("electron");
 const { init, initLibrary, runInitialScan } = require("./library");
 const { isUndefined } = require("lodash");
 const { getUrl } = require("./util");
-const { fetchSpotifyTokens, play, pause, search } = require("./spotify");
+const { fetchTokens, play, pause, search } = require("./spotify");
 
 const SPOTIFY_SCOPES =
   "" +
@@ -183,7 +183,7 @@ ipcMain.on("removeMusicLibraryPath", (event, songList, paths, deletedPath) => {
 
 // IPC for Spotify
 
-ipcMain.on("fetchSpotifyTokens", fetchSpotifyTokens);
-ipcMain.on("spotifyPlay", play);
-ipcMain.on("spotifyPause", pause);
-ipcMain.on("spotifySearch", search);
+ipcMain.on("SpotifyFetchTokens", fetchTokens);
+ipcMain.on("SpotifyPlay", play);
+ipcMain.on("SpotifyPause", pause);
+ipcMain.on("SpotifySearch", search);

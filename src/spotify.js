@@ -11,9 +11,9 @@ const SPOTIFY_AUTH_BASE64 = Buffer.from(
 ).toString("base64");
 const SPOTIFY_BASIC_AUTH_HEADER = `Basic ${SPOTIFY_AUTH_BASE64}`;
 
-let spotifyTokensCache;
+let tokensCache;
 
-const fetchSpotifyTokens = async (event, codeOrToken, grantType) => {
+const fetchTokens = async (event, codeOrToken, grantType) => {
   console.log(`Fetching spotify tokens (grant type: ${grantType})`);
   const params = new URLSearchParams();
   params.append("grant_type", grantType);
@@ -44,26 +44,22 @@ const fetchSpotifyTokens = async (event, codeOrToken, grantType) => {
     },
     camelCase
   );
-  spotifyTokensCache = { ...tokens };
-  event.sender.send("gotSpotifyTokens", tokens, tokens.refreshToken);
+  tokensCache = { ...tokens };
+  event.sender.send("GotSpotifyTokens", tokens, tokens.refreshToken);
 };
 
 let retries = 0;
 
 const refreshTokensAndRetry = async (event, callback, params) => {
-  if (!spotifyTokensCache || retries > 1) {
+  if (!tokensCache || retries > 1) {
     retries = 0;
-    event.sender.send("spotifyNotWorking");
+    event.sender.send("SpotifyNotWorking");
     return;
   }
   retries++;
   console.log(`Attempting spotify tokens refresh (times: ${retries})`);
-  console.log(spotifyTokensCache);
-  await fetchSpotifyTokens(
-    event,
-    spotifyTokensCache.refreshToken,
-    "refresh_token"
-  );
+  console.log(tokensCache);
+  await fetchTokens(event, tokensCache.refreshToken, "refresh_token");
   await callback(event, ...params);
 };
 
@@ -81,7 +77,7 @@ const dispatchPlayerAction = async (event, token, method) => {
     console.error(`Spotify ${method} failed`, res);
     if (res.status === 401) {
       await refreshTokensAndRetry(event, dispatchPlayerAction, [
-        spotifyTokensCache.accessToken,
+        tokensCache.accessToken,
         method
       ]);
     }
@@ -111,19 +107,19 @@ const search = async (event, token, query) => {
     console.error("Spotify search failed", res);
     if (res.status === 401) {
       await refreshTokensAndRetry(event, search, [
-        spotifyTokensCache.accessToken,
+        tokensCache.accessToken,
         query
       ]);
     }
     return;
   }
 
-  const result = await res.json();
-  event.sender.send("gotSpotifySearchResults", result);
+  const results = await res.json();
+  event.sender.send("GotSpotifySearchResults", results);
 };
 
 module.exports = {
-  fetchSpotifyTokens,
+  fetchTokens,
   play,
   pause,
   search
