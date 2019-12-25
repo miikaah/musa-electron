@@ -1,19 +1,11 @@
 // Modules to control application life and create native browser window
 "use strict";
 
-const path = require("path");
 const { app, BrowserWindow, ipcMain, Menu, dialog } = require("electron");
 const { init, initLibrary, runInitialScan } = require("./library");
-const { isUndefined, camelCase } = require("lodash");
-const fetch = require("node-fetch");
-const { URLSearchParams } = require("url");
-const { mapKeysToCaseShallow } = require("./util");
-
-const getUrl = () => {
-  return process.env.IS_DEV
-    ? "http://localhost:3666"
-    : `file://${path.join(__dirname, "../build/index.html")}`;
-};
+const { isUndefined } = require("lodash");
+const { getUrl } = require("./util");
+const { fetchSpotifyTokens, play, pause } = require("./spotify");
 
 const SPOTIFY_SCOPES =
   "" +
@@ -32,12 +24,7 @@ const SPOTIFY_SCOPES =
   "playlist-read-collaborative " +
   "user-read-private";
 const { SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET } = process.env;
-const SPOTIFY_AUTH_BASE64 = Buffer.from(
-  `${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`
-).toString("base64");
-const SPOTIFY_BASIC_AUTH_HEADER = `Basic ${SPOTIFY_AUTH_BASE64}`;
 const SPOTIFY_AUTHORIZE_URL = `https://accounts.spotify.com/authorize?client_id=${SPOTIFY_CLIENT_ID}&response_type=code&redirect_uri=${getUrl()}&scope=${SPOTIFY_SCOPES}`;
-const SPOTIFY_PLAYER_BASE = "https://api.spotify.com/v1/me/player";
 const hasSpotifyCredentials =
   !isUndefined(SPOTIFY_CLIENT_ID) && !isUndefined(SPOTIFY_CLIENT_SECRET);
 
@@ -176,8 +163,7 @@ app.on("activate", function() {
   }
 });
 
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
+// IPC for library actions
 
 ipcMain.on("initLibrary", initLibrary);
 ipcMain.on("runInitialScan", runInitialScan);
@@ -195,56 +181,8 @@ ipcMain.on("removeMusicLibraryPath", (event, songList, paths, deletedPath) => {
   initLibrary(event, songList, paths, deletedPath);
 });
 
-ipcMain.on("fetchSpotifyTokens", async (event, codeOrToken, grantType) => {
-  const params = new URLSearchParams();
-  params.append("grant_type", grantType);
-  params.append("redirect_uri", getUrl());
-  params.append(
-    grantType === "authorization_code" ? "code" : "refresh_token",
-    codeOrToken
-  );
+// IPC for Spotify
 
-  const res = await fetch("https://accounts.spotify.com/api/token", {
-    method: "POST",
-    body: params,
-    headers: {
-      Authorization: SPOTIFY_BASIC_AUTH_HEADER
-    }
-  });
-
-  if (!res.ok) {
-    console.error("Spotify tokens fetch failed", res);
-    return;
-  }
-
-  const result = await res.json();
-  const tokens = mapKeysToCaseShallow(
-    {
-      ...result,
-      expiresAt: new Date().getTime() + result.expires_in * 1000
-    },
-    camelCase
-  );
-  event.sender.send("gotSpotifyTokens", tokens, tokens.refreshToken);
-});
-
-const playOrPause = async (method, token) => {
-  const res = await fetch(`${SPOTIFY_PLAYER_BASE}/${method}`, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  });
-  if (!res.ok) {
-    console.error(`Spotify ${method} failed`, res);
-    return;
-  }
-};
-
-ipcMain.on("spotifyPlay", async (event, token) => {
-  await playOrPause("play", token);
-});
-
-ipcMain.on("spotifyPause", async (event, token) => {
-  await playOrPause("pause", token);
-});
+ipcMain.on("fetchSpotifyTokens", fetchSpotifyTokens);
+ipcMain.on("spotifyPlay", play);
+ipcMain.on("spotifyPause", pause);
