@@ -6,6 +6,8 @@ const { init, initLibrary, runInitialScan } = require("./library");
 const { isUndefined } = require("lodash");
 const { getUrl } = require("./util");
 const {
+  SPOTIFY_AUTHORIZE_URL,
+  hasSpotifyCredentials,
   fetchTokens,
   play,
   pause,
@@ -13,27 +15,6 @@ const {
   getAlbumsTracks
 } = require("./spotify");
 const promiseIpc = require("electron-promise-ipc");
-
-const SPOTIFY_SCOPES =
-  "" +
-  "user-modify-playback-state " +
-  "user-read-playback-state " +
-  "user-read-currently-playing " +
-  "user-top-read " +
-  "user-read-recently-played " +
-  // + 'user-library-modify '
-  "user-library-read " +
-  // + 'user-follow-modify '
-  // + 'user-follow-read '
-  "playlist-read-private " +
-  // + 'playlist-modify-public '
-  // + 'playlist-modify-private '
-  "playlist-read-collaborative " +
-  "user-read-private";
-const { SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET } = process.env;
-const SPOTIFY_AUTHORIZE_URL = `https://accounts.spotify.com/authorize?client_id=${SPOTIFY_CLIENT_ID}&response_type=code&redirect_uri=${getUrl()}&scope=${SPOTIFY_SCOPES}`;
-const hasSpotifyCredentials =
-  !isUndefined(SPOTIFY_CLIENT_ID) && !isUndefined(SPOTIFY_CLIENT_SECRET);
 
 let mainWindow;
 

@@ -1,19 +1,35 @@
 const fetch = require("node-fetch");
-const { camelCase } = require("lodash");
+const { isUndefined, camelCase } = require("lodash");
 const { URLSearchParams } = require("url");
-const { mapKeysToCaseShallow } = require("./util");
-const { getUrl } = require("./util");
+const { mapKeysToCaseShallow, getUrl } = require("./util");
 
+const SPOTIFY_SCOPES =
+  "" +
+  "user-modify-playback-state " +
+  "user-read-playback-state " +
+  "user-read-currently-playing " +
+  "user-top-read " +
+  "user-read-recently-played " +
+  // + 'user-library-modify '
+  "user-library-read " +
+  // + 'user-follow-modify '
+  // + 'user-follow-read '
+  "playlist-read-private " +
+  // + 'playlist-modify-public '
+  // + 'playlist-modify-private '
+  "playlist-read-collaborative " +
+  "user-read-private";
 const { SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET } = process.env;
-
 const SPOTIFY_AUTH_BASE64 = Buffer.from(
   `${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`
 ).toString("base64");
 const SPOTIFY_BASIC_AUTH_HEADER = `Basic ${SPOTIFY_AUTH_BASE64}`;
-
-let tokensCache;
+const SPOTIFY_AUTHORIZE_URL = `https://accounts.spotify.com/authorize?client_id=${SPOTIFY_CLIENT_ID}&response_type=code&redirect_uri=${getUrl()}&scope=${SPOTIFY_SCOPES}`;
+const hasSpotifyCredentials =
+  !isUndefined(SPOTIFY_CLIENT_ID) && !isUndefined(SPOTIFY_CLIENT_SECRET);
 
 const fetchTokens = async (event, codeOrToken, grantType) => {
+  // eslint-disable-next-line no-console
   console.log(`Fetching spotify tokens (grant type: ${grantType})`);
   const params = new URLSearchParams();
   params.append("grant_type", grantType);
@@ -44,85 +60,98 @@ const fetchTokens = async (event, codeOrToken, grantType) => {
     },
     camelCase
   );
-  tokensCache = { ...tokens };
+  // eslint-disable-next-line no-console
+  console.log("Got Spotify tokens");
   event.sender.send("GotSpotifyTokens", tokens, tokens.refreshToken);
+  return tokens;
 };
 
-let retries = 0;
-
-const refreshTokensAndRetry = async (event, callback, params) => {
-  if (!tokensCache || retries > 0) {
-    retries = 0;
+const refreshTokensAndRetry = async ({
+  event,
+  tokens,
+  retries,
+  callback,
+  params
+}) => {
+  if (retries > 0) {
     event.sender.send("SpotifyNotWorking");
     return;
   }
   retries++;
+  // eslint-disable-next-line no-console
   console.log(`Attempting spotify tokens refresh (times: ${retries})`);
-  console.log(tokensCache);
-  await fetchTokens(event, tokensCache.refreshToken, "refresh_token");
-  await callback(event, ...params);
+  const newTokens = await fetchTokens(event, tokens.refresh, "refresh_token");
+  const mergedTokens = {
+    ...tokens,
+    access: newTokens.accessToken
+  };
+  return callback(event, mergedTokens, retries, ...params);
 };
 
-const SPOTIFY_BASE = "https://api.spotify.com/v1";
-const SPOTIFY_PLAYER_BASE = `${SPOTIFY_BASE}/me/player`;
-
-const dispatchPlayerAction = async (event, token, method) => {
-  const res = await fetch(`${SPOTIFY_PLAYER_BASE}/${method}`, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  });
-  if (!res.ok) {
-    console.error(`Spotify ${method} failed`, res);
-    if (res.status === 401) {
-      await refreshTokensAndRetry(event, dispatchPlayerAction, [
-        tokensCache.accessToken,
-        method
-      ]);
-    }
-    return;
-  }
-};
-
-const play = (token, event) => dispatchPlayerAction(event, token, "play");
-const pause = (token, event) => dispatchPlayerAction(event, token, "pause");
-
-const get = async (event, token, url) => {
+const executeFetch = async (url, method, options) => {
   const res = await fetch(url, {
-    method: "GET",
+    method,
     headers: {
-      Authorization: `Bearer ${token}`
+      Authorization: `Bearer ${options.tokens.access}`
     }
   });
 
+  // eslint-disable-next-line no-console
   console.log(res.status, new Date().toISOString(), url);
 
   if (!res.ok) {
-    console.error("Spotify GET failed", res);
+    console.error(`Spotify ${method} failed`, res);
     if (res.status === 401) {
-      await refreshTokensAndRetry(event, get, [tokensCache.accessToken, url]);
+      return refreshTokensAndRetry(options);
     }
     return;
   }
+
   return res.json();
 };
 
-const SPOTIFY_SEARCH_BASE = `${SPOTIFY_BASE}/search`;
+const SPOTIFY_BASE = "https://api.spotify.com/v1";
+const SPOTIFY_PLAYER = `${SPOTIFY_BASE}/me/player`;
+const SPOTIFY_SEARCH = `${SPOTIFY_BASE}/search`;
+const SPOTIFY_ALBUMS = `${SPOTIFY_BASE}/albums`;
 
-const search = async (token, query, event) => {
-  if (!query) return;
-  const fetchQuery = `?q="${query}"&limit=10&type=album,artist,track&market=from_token`;
-  return get(event, token, `${SPOTIFY_SEARCH_BASE}${fetchQuery}`);
+const get = async (event, tokens, retries = 0, url) => {
+  return executeFetch(url, "GET", {
+    event,
+    tokens,
+    retries,
+    callback: get,
+    params: [url]
+  });
 };
 
-const SPOTIFY_ALBUMS_BASE = `${SPOTIFY_BASE}/albums`;
+const put = async (event, tokens, retries = 0, url) => {
+  return executeFetch(url, "PUT", {
+    event,
+    tokens,
+    retries,
+    callback: put,
+    params: [url]
+  });
+};
 
-const getAlbumsTracks = async (token, item, event) => {
-  return get(event, token, `${SPOTIFY_ALBUMS_BASE}/${item.id}/tracks`);
+const play = (tokens, event) => put(event, tokens, 0, `${SPOTIFY_PLAYER}/play`);
+const pause = (tokens, event) =>
+  put(event, tokens, 0, `${SPOTIFY_PLAYER}/pause`);
+
+const search = async (tokens, query, event) => {
+  if (!query) return;
+  const fetchQuery = `?q="${query}"&limit=10&type=album,artist,track&market=from_token`;
+  return get(event, tokens, 0, `${SPOTIFY_SEARCH}${fetchQuery}`);
+};
+
+const getAlbumsTracks = async (tokens, item, event) => {
+  return get(event, tokens, 0, `${SPOTIFY_ALBUMS}/${item.id}/tracks`);
 };
 
 module.exports = {
+  SPOTIFY_AUTHORIZE_URL,
+  hasSpotifyCredentials,
   fetchTokens,
   play,
   pause,
