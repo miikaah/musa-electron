@@ -91,8 +91,10 @@ const refreshTokensAndRetry = async ({
 const executeFetch = async (url, method, options) => {
   const res = await fetch(url, {
     method,
+    body: JSON.stringify(options.body),
     headers: {
-      Authorization: `Bearer ${options.tokens.access}`
+      Authorization: `Bearer ${options.tokens.access}`,
+      "Content-Type": "application/json"
     }
   });
 
@@ -107,7 +109,7 @@ const executeFetch = async (url, method, options) => {
     return;
   }
 
-  return res.json();
+  return res.status === 200 ? res.json() : res.text();
 };
 
 const SPOTIFY_BASE = "https://api.spotify.com/v1";
@@ -125,17 +127,19 @@ const get = async (event, tokens, retries = 0, url) => {
   });
 };
 
-const put = async (event, tokens, retries = 0, url) => {
+const put = async (event, tokens, retries = 0, url, body) => {
   return executeFetch(url, "PUT", {
     event,
     tokens,
     retries,
     callback: put,
-    params: [url]
+    params: [url],
+    body
   });
 };
 
-const play = (tokens, event) => put(event, tokens, 0, `${SPOTIFY_PLAYER}/play`);
+const play = (tokens, item, event) =>
+  put(event, tokens, 0, `${SPOTIFY_PLAYER}/play`, { uris: [item.uri] });
 const pause = (tokens, event) =>
   put(event, tokens, 0, `${SPOTIFY_PLAYER}/pause`);
 
