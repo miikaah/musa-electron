@@ -1,6 +1,6 @@
-const fs = require("fs")
-const fsPromises = require("fs").promises
-const { parse, join, sep } = require("path")
+const fs = require("fs");
+const fsPromises = require("fs").promises;
+const { parse, join, sep } = require("path");
 const {
   negate,
   defaultTo,
@@ -8,51 +8,51 @@ const {
   isUndefined,
   flatten,
   endsWith
-} = require("lodash")
-const { getSongMetadata } = require("./metadata")
-const { isSupportedFileType, isHiddenFile } = require("./util")
+} = require("lodash");
+const { getSongMetadata } = require("./metadata");
+const { isSupportedFileType, isHiddenFile } = require("./util");
 
-const Bottleneck = require("bottleneck")
+const Bottleneck = require("bottleneck");
 
-const INIT = "INIT"
-const UPDATE_LIBRARY_LISTINGS = "UPDATE_LIBRARY_LISTINGS"
+const INIT = "INIT";
+const UPDATE_LIBRARY_LISTINGS = "UPDATE_LIBRARY_LISTINGS";
 
-const bottleneck = new Bottleneck({ maxConcurrent: 12 })
+const bottleneck = new Bottleneck({ maxConcurrent: 12 });
 
 async function create(obj) {
   switch (obj.msg) {
     case INIT:
     case UPDATE_LIBRARY_LISTINGS:
-      return init(obj.payload)
+      return init(obj.payload);
     default:
-      return
+      return;
   }
 }
 
 async function init({ path, folderName }) {
-  return scanArtistFolder(path, folderName)
+  return scanArtistFolder(path, folderName);
 }
 
 // For debugging
 process.on("message", async msg => {
   try {
-    const result = await create(msg)
-    process.send(JSON.stringify(result))
+    const result = await create(msg);
+    process.send(JSON.stringify(result));
   } catch (e) {
-    console.error("DEBUG", e)
-    process.send(JSON.stringify(e))
+    console.error("DEBUG", e);
+    process.send(JSON.stringify(e));
   }
-})
+});
 
 async function scanArtistFolder(path, folderName) {
   return new Promise((resolve, reject) => {
     fs.readdir(path, { withFileTypes: true }, async (err, files) => {
-      if (err) return reject(err)
+      if (err) return reject(err);
 
       const albums = await scanAlbumFolder(
         path,
         files.filter(negate(isHiddenFile))
-      )
+      );
 
       const songs = files
         .filter(file => !file.isDirectory())
@@ -61,15 +61,15 @@ async function scanArtistFolder(path, folderName) {
           ...file,
           path: join(path, file.name)
         }))
-        .filter(song => isSupportedFileType(song.path))
+        .filter(song => isSupportedFileType(song.path));
 
-      const songsWithMetadata = await getSongsWithMetadata(songs)
+      const songsWithMetadata = await getSongsWithMetadata(songs);
       const emptyAlbum = {
         date: "2525",
         genre: "",
         name: "undefined",
         songs: songsWithMetadata
-      }
+      };
 
       resolve({
         name: folderName,
@@ -78,72 +78,72 @@ async function scanArtistFolder(path, folderName) {
           Array.isArray(songsWithMetadata) && songsWithMetadata.length > 0
             ? flatten(albums.concat(emptyAlbum))
             : flatten(albums)
-      })
-    })
-  })
+      });
+    });
+  });
 }
 
 async function scanAlbumFolder(path, files) {
   return new Promise(async (resolve, reject) => {
-    if (files.length < 1) return resolve([])
-    const allSongs = []
+    if (files.length < 1) return resolve([]);
+    const allSongs = [];
     try {
       await Promise.all(
         files.map(async file => {
           const songs = await bottleneck.schedule(async () => {
             // For recursion
-            const parent = { songs: [] }
-            const listing = await getDirStructureForSubDir(file, path, parent)
-            return listing.songs
-          })
+            const parent = { songs: [] };
+            const listing = await getDirStructureForSubDir(file, path, parent);
+            return listing.songs;
+          });
           if (songs) {
-            allSongs.push(...songs)
+            allSongs.push(...songs);
           }
         })
-      )
+      );
       resolve(
         getAlbumsBySongs(
           allSongs.filter(song => isSupportedFileType(song.path)),
           path
         )
-      )
+      );
     } catch (e) {
-      console.error("(scanAlbumFolder)", e)
-      reject(e)
+      console.error("(scanAlbumFolder)", e);
+      reject(e);
     }
-  })
+  });
 }
 
 async function getDirStructureForSubDir(file, path, parent) {
-  const childPath = join(path, file.name)
-  const song = { name: file.name, path: childPath }
+  const childPath = join(path, file.name);
+  const song = { name: file.name, path: childPath };
 
-  if (!file.isDirectory()) return parent.songs.push(song)
+  if (!file.isDirectory()) return parent.songs.push(song);
 
-  const files = fs.readdirSync(childPath, { withFileTypes: true })
+  const files = fs.readdirSync(childPath, { withFileTypes: true });
   await Promise.all(
     files
       .filter(negate(isHiddenFile))
       .map(file => getDirStructureForSubDir(file, childPath, parent))
-  )
-  return parent
+  );
+  return parent;
 }
 
 async function getSongsWithMetadata(songs) {
   return Promise.all(
     songs.map(async song => {
-      let metadata = {}
+      let metadata = {};
       try {
-        metadata = await getSongMetadata(song.path)
+        metadata = await getSongMetadata(song.path);
       } catch (e) {
-        console.error(e)
+        console.error(e);
       }
       return {
         ...song,
         metadata
-      }
+      };
     })
-  )
+  );
 }
 
 // The albums are first reduced to filesystem folders
@@ -159,55 +159,55 @@ async function getSongsWithMetadata(songs) {
 //    and afterwards greedily from any subdirectories.
 //
 async function getAlbumsBySongs(songs, path) {
-  const songsWithMetadata = await getSongsWithMetadata(songs)
-  const albums = reduceSongsToAlbumsByPath(songsWithMetadata)
-  const reducedAlbums = reduceAlbumsByPath(Object.values(albums), path)
+  const songsWithMetadata = await getSongsWithMetadata(songs);
+  const albums = reduceSongsToAlbumsByPath(songsWithMetadata);
+  const reducedAlbums = reduceAlbumsByPath(Object.values(albums), path);
   const albumsAsArray = (await Promise.all(
     Object.keys(reducedAlbums).map(async folderPath => {
-      const album = reducedAlbums[folderPath]
+      const album = reducedAlbums[folderPath];
       return {
         ...album,
         songs: album.songs.sort(byTrackOrName),
         date: mostFrequentStringInArray(
-          album.songs.map(s => get(s, "metadata.date", "0"))
+          album.songs.map(s => get(s, "metadata.date", ""))
         ),
         genre: mostFrequentStringInArray(
           album.songs.map(s => get(s, "metadata.genre", ""))
         ),
         cover: await getCoverPath(album)
-      }
+      };
     })
   )).map(a => {
     // Make sure songs without an album are last in the array
     // Atleast till this day :D
     // Zager & Evans FTW
-    if (a.name === "undefined") return { ...a, date: "2525", genre: "" }
-    return a
-  })
-  return albumsAsArray.sort((a, b) => a.date.localeCompare(b.date))
+    if (a.name === "undefined") return { ...a, date: "2525", genre: "" };
+    return a;
+  });
+  return albumsAsArray.sort((a, b) => a.date.localeCompare(b.date));
 }
 
 function reduceSongsToAlbumsByPath(songs) {
   return songs.reduce((albums, song) => {
-    const path = song.path.replace(`${sep}${song.name}`, "")
-    const album = defaultTo(albums[path], { songs: [] })
+    const path = song.path.replace(`${sep}${song.name}`, "");
+    const album = defaultTo(albums[path], { songs: [] });
 
-    album.songs = [...album.songs, song]
-    album.path = path
-    album.name = song.metadata.album
+    album.songs = [...album.songs, song];
+    album.path = path;
+    album.name = song.metadata.album;
 
-    return { ...albums, [album.path]: album }
-  }, {})
+    return { ...albums, [album.path]: album };
+  }, {});
 }
 
 function reduceAlbumsByPath(albums, path) {
   return albums.reduce((albums, album) => {
-    const albumFolderName = album.path.replace(path, "").split(sep)[1]
-    const albumFolderPath = join(path, albumFolderName)
-    const songs = get(albums, [albumFolderPath, "songs"], [])
-    const searchPaths = get(albums, [albumFolderPath, "searchPaths"], [])
+    const albumFolderName = album.path.replace(path, "").split(sep)[1];
+    const albumFolderPath = join(path, albumFolderName);
+    const songs = get(albums, [albumFolderPath, "songs"], []);
+    const searchPaths = get(albums, [albumFolderPath, "searchPaths"], []);
 
-    album.songs = [...songs, ...album.songs]
+    album.songs = [...songs, ...album.songs];
 
     return {
       ...albums,
@@ -216,91 +216,91 @@ function reduceAlbumsByPath(albums, path) {
         path: albumFolderPath,
         searchPaths: [...searchPaths, album.path]
       }
-    }
-  }, {})
+    };
+  }, {});
 }
 
 function byTrackOrName(a, b) {
   return get(a, "metadata.track", a.name).localeCompare(
     get(b, "metadata.track", b.name)
-  )
+  );
 }
 
 function mostFrequentStringInArray(array) {
-  const counts = {}
-  let comparison = 0
-  let mostFrequent
+  const counts = {};
+  let comparison = 0;
+  let mostFrequent;
 
   for (let i = 0; i < array.length; i++) {
-    const word = array[i]
+    const word = array[i];
 
-    if (isUndefined(counts[word])) counts[word] = 1
-    else counts[word] += 1
+    if (isUndefined(counts[word])) counts[word] = 1;
+    else counts[word] += 1;
 
     if (counts[word] > comparison) {
-      comparison = counts[word]
-      mostFrequent = array[i]
+      comparison = counts[word];
+      mostFrequent = array[i];
     }
   }
-  return mostFrequent
+  return mostFrequent;
 }
 
 async function getCoverPath(album) {
-  let { dirPath, pics } = await getPicsByPath(album.path)
+  let { dirPath, pics } = await getPicsByPath(album.path);
 
   // Could not find cover in album root path.
   // Make a greedy lookup to other directories in this folder.
   if (!pics.length) {
     for (const searchPath of album.searchPaths) {
-      ;({ dirPath, pics } = await getPicsByPath(searchPath))
-      if (pics) break
+      ({ dirPath, pics } = await getPicsByPath(searchPath));
+      if (pics) break;
     }
   }
 
-  if (!pics.length) return
+  if (!pics.length) return;
 
   const albumNamePic = pics.find(s => {
-    const parsedName = parse(s)
+    const parsedName = parse(s);
     const name = parsedName.base
       .replace(parsedName.ext, "")
       .replace(/[/?<>;*|"]/g, "")
-      .toLowerCase()
-    const aName = `${album.name}`.replace(/[/?<>;*|"]/g, "").toLowerCase()
-    return name === aName
-  })
+      .toLowerCase();
+    const aName = `${album.name}`.replace(/[/?<>;*|"]/g, "").toLowerCase();
+    return name === aName;
+  });
 
-  if (albumNamePic) return join(dirPath, albumNamePic)
+  if (albumNamePic) return join(dirPath, albumNamePic);
 
   const defaultNamePic = pics.find(pic => {
-    const s = pic.toLowerCase()
+    const s = pic.toLowerCase();
     return (
       s.includes("front") ||
       s.includes("cover") ||
       s.includes("_large") ||
       s.includes("folder")
-    )
-  })
+    );
+  });
 
-  if (defaultNamePic) return join(dirPath, defaultNamePic)
+  if (defaultNamePic) return join(dirPath, defaultNamePic);
 
   // Default to any picture
-  return join(dirPath, pics[0])
+  return join(dirPath, pics[0]);
 }
 
 async function getPicsByPath(path) {
-  const dirPath = getPathThatEndsWithSep(path)
-  const dir = await fsPromises.readdir(dirPath)
+  const dirPath = getPathThatEndsWithSep(path);
+  const dir = await fsPromises.readdir(dirPath);
   return {
     dirPath,
     pics: dir
       .map(p => p.toLowerCase())
       .filter(p => /(.png|.jpg|.jpeg)$/.test(p))
-  }
+  };
 }
 
 function getPathThatEndsWithSep(path) {
-  if (endsWith(path, sep)) return path
-  return `${path}${sep}`
+  if (endsWith(path, sep)) return path;
+  return `${path}${sep}`;
 }
 
 module.exports = {
@@ -308,4 +308,4 @@ module.exports = {
   UPDATE_LIBRARY_LISTINGS,
   create,
   init
-}
+};
