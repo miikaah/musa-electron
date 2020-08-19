@@ -33,7 +33,7 @@
   "license": "ISC",
   "devDependencies": {
     "dotenv-cli": "^3.2.0",
-    "electron": "4.0.4",
+    "electron": "7.2.4",
     "electron-packager": "15.0.0",
     "electron-rebuild": "1.11.0",
     "eslint": "^7.7.0",
