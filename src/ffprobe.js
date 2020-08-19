@@ -22,5 +22,5 @@ module.exports = {
         cb(new Error(`ffprobe returned invalid JSON: ${err} : ${stdout}`));
       }
     });
-  }
+  },
 };

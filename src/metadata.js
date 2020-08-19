@@ -11,7 +11,9 @@ async function getSongMetadata(path) {
       ["-v", "error", "-print_format", "json", "-show_entries", "format"],
       ffprobeStatic.path,
       (err, tags) => {
-        if (err) return reject(err);
+        if (err) {
+          return reject(err);
+        }
         const format = getSafeTagFieldNames(get(tags, "format", {}));
         const formatTags = getSafeTagFieldNames(get(format, "tags", {}));
         const { track, totalTracks } = getTrackAndTotalTracks(formatTags);
@@ -22,7 +24,7 @@ async function getSongMetadata(path) {
           bitRate: `${parseInt(get(format, "bitRate", 0) / 1000, 10)} kbps`,
           date: `${defaultTo(parseInt(formatTags.date, 10), "")}`,
           track,
-          totalTracks
+          totalTracks,
         });
       }
     );
@@ -54,12 +56,12 @@ function getTrackAndTotalTracks(tags) {
     const discParts = `${disc}`.split("/");
     return {
       track: `${discParts[0]}.${prefixNumber(parseInt(trackParts[0], 10))}`,
-      totalTracks: trackParts[1]
+      totalTracks: trackParts[1],
     };
   }
   return {
     track: prefixNumber(parseInt(trackParts[0], 10)),
-    totalTracks: trackParts[1]
+    totalTracks: trackParts[1],
   };
 }
 
@@ -70,5 +72,5 @@ function getSafeTagFieldNames(tags) {
 module.exports = {
   getSongMetadata,
   formatDuration,
-  getTrackAndTotalTracks
+  getTrackAndTotalTracks,
 };

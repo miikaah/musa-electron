@@ -7,7 +7,7 @@ const {
   get,
   isUndefined,
   flatten,
-  endsWith
+  endsWith,
 } = require("lodash");
 const { getSongMetadata } = require("./metadata");
 const { isSupportedFileType, isHiddenFile } = require("./util");
@@ -34,7 +34,7 @@ async function init({ path, folderName }) {
 }
 
 // For debugging
-process.on("message", async msg => {
+process.on("message", async (msg) => {
   try {
     const result = await create(msg);
     process.send(JSON.stringify(result));
@@ -55,20 +55,20 @@ async function scanArtistFolder(path, folderName) {
       );
 
       const songs = files
-        .filter(file => !file.isDirectory())
+        .filter((file) => !file.isDirectory())
         .filter(negate(isHiddenFile))
-        .map(file => ({
+        .map((file) => ({
           ...file,
-          path: join(path, file.name)
+          path: join(path, file.name),
         }))
-        .filter(song => isSupportedFileType(song.path));
+        .filter((song) => isSupportedFileType(song.path));
 
       const songsWithMetadata = await getSongsWithMetadata(songs);
       const emptyAlbum = {
         date: "2525",
         genre: "",
         name: "undefined",
-        songs: songsWithMetadata
+        songs: songsWithMetadata,
       };
 
       resolve({
@@ -77,7 +77,7 @@ async function scanArtistFolder(path, folderName) {
         albums:
           Array.isArray(songsWithMetadata) && songsWithMetadata.length > 0
             ? flatten(albums.concat(emptyAlbum))
-            : flatten(albums)
+            : flatten(albums),
       });
     });
   });
@@ -89,7 +89,7 @@ async function scanAlbumFolder(path, files) {
     const allSongs = [];
     try {
       await Promise.all(
-        files.map(async file => {
+        files.map(async (file) => {
           const songs = await bottleneck.schedule(async () => {
             // For recursion
             const parent = { songs: [] };
@@ -103,7 +103,7 @@ async function scanAlbumFolder(path, files) {
       );
       resolve(
         getAlbumsBySongs(
-          allSongs.filter(song => isSupportedFileType(song.path)),
+          allSongs.filter((song) => isSupportedFileType(song.path)),
           path
         )
       );
@@ -124,14 +124,14 @@ async function getDirStructureForSubDir(file, path, parent) {
   await Promise.all(
     files
       .filter(negate(isHiddenFile))
-      .map(file => getDirStructureForSubDir(file, childPath, parent))
+      .map((file) => getDirStructureForSubDir(file, childPath, parent))
   );
   return parent;
 }
 
 async function getSongsWithMetadata(songs) {
   return Promise.all(
-    songs.map(async song => {
+    songs.map(async (song) => {
       let metadata = {};
       try {
         metadata = await getSongMetadata(song.path);
@@ -140,7 +140,7 @@ async function getSongsWithMetadata(songs) {
       }
       return {
         ...song,
-        metadata
+        metadata,
       };
     })
   );
@@ -162,22 +162,24 @@ async function getAlbumsBySongs(songs, path) {
   const songsWithMetadata = await getSongsWithMetadata(songs);
   const albums = reduceSongsToAlbumsByPath(songsWithMetadata);
   const reducedAlbums = reduceAlbumsByPath(Object.values(albums), path);
-  const albumsAsArray = (await Promise.all(
-    Object.keys(reducedAlbums).map(async folderPath => {
-      const album = reducedAlbums[folderPath];
-      return {
-        ...album,
-        songs: album.songs.sort(byTrackOrName),
-        date: mostFrequentStringInArray(
-          album.songs.map(s => get(s, "metadata.date", ""))
-        ),
-        genre: mostFrequentStringInArray(
-          album.songs.map(s => get(s, "metadata.genre", ""))
-        ),
-        cover: await getCoverPath(album)
-      };
-    })
-  )).map(a => {
+  const albumsAsArray = (
+    await Promise.all(
+      Object.keys(reducedAlbums).map(async (folderPath) => {
+        const album = reducedAlbums[folderPath];
+        return {
+          ...album,
+          songs: album.songs.sort(byTrackOrName),
+          date: mostFrequentStringInArray(
+            album.songs.map((s) => get(s, "metadata.date", ""))
+          ),
+          genre: mostFrequentStringInArray(
+            album.songs.map((s) => get(s, "metadata.genre", ""))
+          ),
+          cover: await getCoverPath(album),
+        };
+      })
+    )
+  ).map((a) => {
     // Make sure songs without an album are last in the array
     // Atleast till this day :D
     // Zager & Evans FTW
@@ -214,8 +216,8 @@ function reduceAlbumsByPath(albums, path) {
       [albumFolderPath]: {
         ...album,
         path: albumFolderPath,
-        searchPaths: [...searchPaths, album.path]
-      }
+        searchPaths: [...searchPaths, album.path],
+      },
     };
   }, {});
 }
@@ -259,7 +261,7 @@ async function getCoverPath(album) {
 
   if (!pics.length) return;
 
-  const albumNamePic = pics.find(s => {
+  const albumNamePic = pics.find((s) => {
     const parsedName = parse(s);
     const name = parsedName.base
       .replace(parsedName.ext, "")
@@ -271,7 +273,7 @@ async function getCoverPath(album) {
 
   if (albumNamePic) return join(dirPath, albumNamePic);
 
-  const defaultNamePic = pics.find(pic => {
+  const defaultNamePic = pics.find((pic) => {
     const s = pic.toLowerCase();
     return (
       s.includes("front") ||
@@ -293,8 +295,8 @@ async function getPicsByPath(path) {
   return {
     dirPath,
     pics: dir
-      .map(p => p.toLowerCase())
-      .filter(p => /(.png|.jpg|.jpeg)$/.test(p))
+      .map((p) => p.toLowerCase())
+      .filter((p) => /(.png|.jpg|.jpeg)$/.test(p)),
   };
 }
 
@@ -307,5 +309,5 @@ module.exports = {
   INIT,
   UPDATE_LIBRARY_LISTINGS,
   create,
-  init
+  init,
 };

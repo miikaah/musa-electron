@@ -17,7 +17,7 @@ function createWindow() {
   let biggestDisplay = allDisplays[0];
   if (process.env.IS_DEV && allDisplays.length > 1) {
     allDisplays.forEach(
-      display =>
+      (display) =>
         (biggestDisplay =
           display.size.width > biggestDisplay.size.width
             ? display
@@ -28,11 +28,11 @@ function createWindow() {
     return process.env.IS_DEV
       ? {
           nodeIntegration: true,
-          webSecurity: false
+          webSecurity: false,
         }
       : {
           nodeIntegration: true,
-          webSecurity: true
+          webSecurity: true,
         };
   };
   // Create the browser window.
@@ -43,8 +43,8 @@ function createWindow() {
     height: 1000,
     webPreferences: {
       backgroundColor: "#21252b",
-      ...getWebPreferencesByEnv()
-    }
+      ...getWebPreferencesByEnv(),
+    },
   });
 
   const getURL = () => {
@@ -58,7 +58,7 @@ function createWindow() {
   if (process.env.IS_DEV) mainWindow.webContents.openDevTools();
 
   // Emitted when the window is closed.
-  mainWindow.on("closed", function() {
+  mainWindow.on("closed", function () {
     // Dereference the window object, usually you would store windows
     // in an array if your app supports multi windows, this is the time
     // when you should delete the corresponding element.
@@ -72,7 +72,7 @@ function createWindow() {
       submenu: [
         {
           label: "About Application",
-          selector: "orderFrontStandardAboutPanel:"
+          selector: "orderFrontStandardAboutPanel:",
         },
         { type: "separator" },
         {
@@ -80,24 +80,24 @@ function createWindow() {
           accelerator: "CmdOrCtrl+R",
           click() {
             mainWindow.reload();
-          }
+          },
         },
         {
           label: "Toggle Developer Tools",
           accelerator:
             process.platform === "darwin" ? "Alt+Command+I" : "Ctrl+Shift+I",
-          click: function(item, focusedWindow) {
+          click: function (item, focusedWindow) {
             if (focusedWindow) focusedWindow.toggleDevTools();
-          }
+          },
         },
         {
           label: "Quit",
           accelerator: "Command+Q",
-          click: function() {
+          click: function () {
             app.quit();
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
     {
       label: "Edit",
@@ -111,10 +111,10 @@ function createWindow() {
         {
           label: "Select All",
           accelerator: "CmdOrCtrl+A",
-          selector: "selectAll:"
-        }
-      ]
-    }
+          selector: "selectAll:",
+        },
+      ],
+    },
   ];
 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
@@ -131,7 +131,7 @@ app.commandLine.appendSwitch("--enable-features", "OverlayScrollbar");
 app.on("ready", createWindow);
 
 // Quit when all windows are closed.
-app.on("window-all-closed", function() {
+app.on("window-all-closed", function () {
   // On macOS it is common for applications and their menu bar
   // to stay active until the user quits explicitly with Cmd + Q
   if (process.platform !== "darwin") {
@@ -139,7 +139,7 @@ app.on("window-all-closed", function() {
   }
 });
 
-app.on("activate", function() {
+app.on("activate", function () {
   // On macOS it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
   if (mainWindow === null) {
@@ -154,7 +154,7 @@ ipcMain.on("initLibrary", initLibrary);
 ipcMain.on("runInitialScan", runInitialScan);
 
 ipcMain.on("addMusicLibraryPath", (event, songList, libPaths = []) => {
-  dialog.showOpenDialog({ properties: ["openDirectory"] }, paths => {
+  dialog.showOpenDialog({ properties: ["openDirectory"] }, (paths) => {
     if (isUndefined(paths)) return;
     const newPath = paths[0];
     event.sender.send("addMusicLibraryPath", newPath);

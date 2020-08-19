@@ -7,7 +7,7 @@ const {
   isUndefined,
   differenceBy,
   defaultTo,
-  uniq
+  uniq,
 } = require("lodash");
 const { isWatchableFile, isHiddenFile } = require("./util");
 const { INIT, UPDATE_LIBRARY_LISTINGS } = require("./scanner");
@@ -20,10 +20,10 @@ const Scanner = requireTaskPool(require.resolve("./scanner.js"));
 const WATCHER_TIMEOUT = 3000;
 
 let mainWindow;
-const logToRenderer = payload => {
+const logToRenderer = (payload) => {
   if (process.env.IS_DEV) mainWindow.webContents.send("log", payload);
 };
-const errorToRenderer = payload => {
+const errorToRenderer = (payload) => {
   if (process.env.IS_DEV) mainWindow.webContents.send("error", payload);
 };
 
@@ -58,22 +58,22 @@ function initLibrary(
 
   if (watcher) watcher.close();
   watcher = chokidar.watch(musicLibraryPaths, {
-    ignored: /^\./
+    ignored: /^\./,
   });
 
   const updateAfterReady = () => {
     isInitialized = true;
     // s[0] is the file path
-    const addedSongList = differenceBy(localSongList, songList, s => s[0]);
-    const removedSongList = differenceBy(songList, localSongList, s => s[0]);
-    const removedSongSet = new Set(removedSongList.map(s => s[0]));
+    const addedSongList = differenceBy(localSongList, songList, (s) => s[0]);
+    const removedSongList = differenceBy(songList, localSongList, (s) => s[0]);
+    const removedSongSet = new Set(removedSongList.map((s) => s[0]));
 
     if (!isInitialScan) {
       updateLibrary(
         event,
         [
           ...addedSongList,
-          ...Array.from(dirtySongSet.values()).map(path => [path])
+          ...Array.from(dirtySongSet.values()).map((path) => [path]),
         ],
         removedSongList,
         musicLibraryPaths,
@@ -84,11 +84,11 @@ function initLibrary(
     event.sender.send(
       "updateSongList",
       [
-        ...defaultTo(songList, []).filter(song => !dirtySongSet.has(song[0])),
+        ...defaultTo(songList, []).filter((song) => !dirtySongSet.has(song[0])),
         ...dirtySongList,
-        ...addedSongList
+        ...addedSongList,
       ]
-        .filter(song => !removedSongSet.has(song[0]))
+        .filter((song) => !removedSongSet.has(song[0]))
         .sort((a, b) => a[0].localeCompare(b[0]))
     );
   };
@@ -128,9 +128,9 @@ function initLibrary(
             "updateSongList",
             [
               ...defaultTo(songList, []).filter(
-                song => !addedSongs.map(s => s[0]).includes(song[0])
+                (song) => !addedSongs.map((s) => s[0]).includes(song[0])
               ),
-              ...addedSongs
+              ...addedSongs,
             ].sort((a, b) => a[0].localeCompare(b[0]))
           );
           addedSongs = [];
@@ -151,9 +151,9 @@ function initLibrary(
           "updateSongList",
           [
             ...defaultTo(songList, []).filter(
-              song => !updatedSongs.map(s => s[0]).includes(song[0])
+              (song) => !updatedSongs.map((s) => s[0]).includes(song[0])
             ),
-            ...updatedSongs
+            ...updatedSongs,
           ].sort((a, b) => a[0].localeCompare(b[0]))
         );
         updatedSongs = [];
@@ -163,7 +163,7 @@ function initLibrary(
 
   // Delete listener
   let removedSongs = [];
-  watcher.on("unlink", path => {
+  watcher.on("unlink", (path) => {
     if (!isInitialized || !isWatchableFile(path)) return;
     removedSongs.push([path]);
     if (removedSongs.length <= 1) {
@@ -172,7 +172,7 @@ function initLibrary(
         event.sender.send(
           "updateSongList",
           songList
-            .filter(song => !removedSongs.map(s => s[0]).includes(song[0]))
+            .filter((song) => !removedSongs.map((s) => s[0]).includes(song[0]))
             .sort((a, b) => a[0].localeCompare(b[0]))
         );
         removedSongs = [];
@@ -182,6 +182,7 @@ function initLibrary(
 }
 
 async function runInitialScan(event, musicLibraryPaths = []) {
+  console.log("Initial scan: ", musicLibraryPaths);
   if (musicLibraryPaths.length < 1) {
     logToRenderer(
       "Music library path array is empty so initial scan can't be run."
@@ -192,35 +193,36 @@ async function runInitialScan(event, musicLibraryPaths = []) {
   const msg = INIT;
   const allFiles = await Promise.all(musicLibraryPaths.map(getArtistFolders));
   const allFilesLength = allFiles.reduce((sum, files) => sum + files.length, 0);
+  console.log("Folders and files:", allFilesLength);
 
   let counter = 0;
   event.sender.send("startInitialScan", allFilesLength);
   await Promise.all(
     musicLibraryPaths.map(async (path, i) => {
       await Promise.all(
-        allFiles[i].map(async file => {
+        allFiles[i].map(async (file) => {
           try {
             const listing = await Scanner.create({
               msg,
-              payload: { path: join(path, file.name), folderName: file.name }
+              payload: { path: join(path, file.name), folderName: file.name },
             });
             counter++;
             event.sender.send("libraryListing", listing);
             event.sender.send("updateInitialScan", counter);
             // For debugging
-            // const child = require("child_process")
-            //   .fork("./src/scanner.js")
+            // console.log(file);
+            // const child = require("child_process").fork("./src/scanner.js");
             // child.send({
             //   msg,
-            //   payload: { path, folderName: file.name }
+            //   payload: { path: join(path, file.name), folderName: file.name }
             // });
             // // This callback breaks progress bar in frontend
-            // child.on('message', msg => {
-            //   const listing = JSON.parse(msg)
-            //   counter++
-            //   event.sender.send("libraryListing", listing)
-            //   event.sender.send("updateInitialScan", counter)
-            // })
+            // child.on("message", msg => {
+            //   const listing = JSON.parse(msg);
+            //   counter++;
+            //   event.sender.send("libraryListing", listing);
+            //   event.sender.send("updateInitialScan", counter);
+            // });
           } catch (e) {
             console.error(e);
             errorToRenderer(e.message);
@@ -252,12 +254,12 @@ async function updateLibrary(
   const hasDeletedSongs = !isEmpty(removedSongList);
   if (!hasUpdatedSongs && !hasDeletedSongs) return;
 
-  const paths = uniq([...updatedSongList, ...removedSongList].map(p => p[0]));
+  const paths = uniq([...updatedSongList, ...removedSongList].map((p) => p[0]));
 
   // A complete library has been removed in UI
   if (!isEmpty(deletedLibraryPath)) {
     const artistPaths = getUniqArtistPaths(paths, [deletedLibraryPath]);
-    artistPaths.forEach(path =>
+    artistPaths.forEach((path) =>
       event.sender.send("deleteLibraryListing", path)
     );
     return;
@@ -286,11 +288,11 @@ async function updateLibrary(
   const artistPaths = getUniqArtistPaths(paths, musicLibraryPaths);
 
   await Promise.all(
-    artistPaths.map(path => {
+    artistPaths.map((path) => {
       const libraryPath = getLibraryPathFromPath(path, musicLibraryPaths);
       return runInBackgroud(event, "libraryListing", UPDATE_LIBRARY_LISTINGS, {
         path,
-        folderName: path.replace(libraryPath, "").split(sep)[1]
+        folderName: path.replace(libraryPath, "").split(sep)[1],
       });
     })
   );
@@ -299,7 +301,7 @@ async function updateLibrary(
 function getUniqArtistPaths(paths, musicLibraryPaths) {
   return Array.from(
     new Set(
-      paths.map(path => {
+      paths.map((path) => {
         const libraryPath = getLibraryPathFromPath(path, musicLibraryPaths);
         return join(libraryPath, path.replace(libraryPath, "").split(sep)[1]);
       })
@@ -308,29 +310,29 @@ function getUniqArtistPaths(paths, musicLibraryPaths) {
 }
 
 function getLibraryPathFromPath(path, musicLibraryPaths) {
-  return musicLibraryPaths.find(p => path.includes(join(p, sep)));
+  return musicLibraryPaths.find((p) => path.includes(join(p, sep)));
 }
 
 async function runInBackgroud(event, eventName, msg, payload) {
   return runInHiddenBrowserWindow(event, eventName, msg, payload);
 
   // For debugging
-  // return new Promise((resolve) => {
-  //   const child = require("child_process").fork("./src/scanner.js")
+  // return new Promise(resolve => {
+  //   const child = require("child_process").fork("./src/scanner.js");
   //   child.send({ msg, payload });
   //   // This callback breaks progress bar in frontend
-  //   child.on('message', msg => {
-  //     const result = JSON.parse(msg)
+  //   child.on("message", msg => {
+  //     const result = JSON.parse(msg);
   //
   //     if (isNonExistantArtist(result) || isRuntimeArtistDeletion(result)) {
-  //       event.sender.send("deleteLibraryListing", payload.path)
-  //       return resolve(result)
+  //       event.sender.send("deleteLibraryListing", payload.path);
+  //       return resolve(result);
   //     }
   //
-  //     event.sender.send(eventName, result)
-  //     resolve(result)
-  //   })
-  // })
+  //     event.sender.send(eventName, result);
+  //     resolve(result);
+  //   });
+  // });
 }
 
 async function runInHiddenBrowserWindow(event, eventName, msg, payload) {
@@ -368,5 +370,5 @@ function isRuntimeArtistDeletion(result) {
 module.exports = {
   init,
   initLibrary,
-  runInitialScan
+  runInitialScan,
 };

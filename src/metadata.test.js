@@ -26,31 +26,31 @@ describe("metadata", () => {
     expect(getTrackAndTotalTracks({ track: "" })).toEqual(emptyResponse);
     expect(getTrackAndTotalTracks({ track: 2 })).toEqual({
       totalTracks: undefined,
-      track: "02"
+      track: "02",
     });
     expect(getTrackAndTotalTracks({ track: "1" })).toEqual({
       totalTracks: undefined,
-      track: "01"
+      track: "01",
     });
     expect(getTrackAndTotalTracks({ track: "01" })).toEqual({
       totalTracks: undefined,
-      track: "01"
+      track: "01",
     });
     expect(getTrackAndTotalTracks({ track: "1/9" })).toEqual({
       totalTracks: "9",
-      track: "01"
+      track: "01",
     });
     expect(getTrackAndTotalTracks({ disc: 2, track: "1/9" })).toEqual({
       totalTracks: "9",
-      track: "2.01"
+      track: "2.01",
     });
     expect(getTrackAndTotalTracks({ disc: "3", track: "13" })).toEqual({
       totalTracks: undefined,
-      track: "3.13"
+      track: "3.13",
     });
     expect(getTrackAndTotalTracks({ disc: "1/3", track: "13" })).toEqual({
       totalTracks: undefined,
-      track: "1.13"
+      track: "1.13",
     });
   });
 });
