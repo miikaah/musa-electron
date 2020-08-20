@@ -171,12 +171,13 @@ ipcMain.on("initLibrary", initLibrary);
 ipcMain.on("runInitialScan", runInitialScan);
 
 ipcMain.on("addMusicLibraryPath", (event, songList, libPaths = []) => {
-  dialog.showOpenDialog({ properties: ["openDirectory"] }, (paths) => {
-    if (isUndefined(paths)) return;
-    const newPath = paths[0];
-    event.sender.send("addMusicLibraryPath", newPath);
-    initLibrary(event, songList, [...libPaths, newPath]);
-  });
+  const paths = dialog.showOpenDialogSync({ properties: ["openDirectory"] });
+
+  if (isUndefined(paths)) return;
+
+  const newPath = paths[0];
+  event.sender.send("addMusicLibraryPath", newPath);
+  initLibrary(event, songList, [...libPaths, newPath]);
 });
 
 ipcMain.on("removeMusicLibraryPath", (event, songList, paths, deletedPath) => {
