@@ -215,7 +215,7 @@ async function runInitialScan(event, musicLibraryPaths = []) {
       );
     })
   );
-  console.log("endInitialScan:", allFilesLength);
+  console.log("endInitialScan:", counter);
   event.sender.send("endInitialScan");
 }
 
