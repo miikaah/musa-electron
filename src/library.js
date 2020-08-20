@@ -279,16 +279,17 @@ async function updateLibrary(
   //
 
   const artistPaths = getUniqArtistPaths(paths, musicLibraryPaths);
-
-  await Promise.all(
-    artistPaths.map((path) => {
+  const tasks = artistPaths.map((path) => {
+    return bottleneck.schedule(() => {
       const libraryPath = getLibraryPathFromPath(path, musicLibraryPaths);
       return runInBackgroud(event, "libraryListing", UPDATE_LIBRARY_LISTINGS, {
         path,
         folderName: path.replace(libraryPath, "").split(sep)[1],
       });
-    })
-  );
+    });
+  });
+
+  await Promise.all(tasks);
 }
 
 function getUniqArtistPaths(paths, musicLibraryPaths) {
