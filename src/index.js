@@ -2,7 +2,14 @@
 "use strict";
 
 const path = require("path");
-const { app, BrowserWindow, ipcMain, Menu, dialog } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  ipcMain,
+  Menu,
+  dialog,
+  protocol,
+} = require("electron");
 const { init, initLibrary, runInitialScan } = require("./library");
 const { isUndefined } = require("lodash");
 
@@ -28,10 +35,16 @@ function createWindow() {
     return process.env.IS_DEV
       ? {
           nodeIntegration: true,
+          backgroundThrottling: false,
+          nodeIntegrationInSubFrames: true,
+          nodeIntegrationInWorker: true,
           webSecurity: false,
         }
       : {
           nodeIntegration: true,
+          backgroundThrottling: false,
+          nodeIntegrationInSubFrames: true,
+          nodeIntegrationInWorker: true,
           webSecurity: true,
         };
   };
@@ -55,7 +68,13 @@ function createWindow() {
   // and load the index.html of the app.
   mainWindow.loadURL(getURL());
 
-  if (process.env.IS_DEV) mainWindow.webContents.openDevTools();
+  if (process.env.IS_DEV) {
+    mainWindow.webContents.openDevTools();
+    protocol.registerFileProtocol("file", (request, callback) => {
+      const pathname = decodeURI(request.url.replace("file://", ""));
+      callback(pathname);
+    });
+  }
 
   // Emitted when the window is closed.
   mainWindow.on("closed", function () {

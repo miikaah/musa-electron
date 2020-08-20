@@ -1,7 +1,7 @@
 const { isEmpty, camelCase, mapKeys, defaultTo, get } = require("lodash");
-const { isSupportedFileType } = require("./util");
-const { ffprobe } = require("./ffprobe");
 const ffprobeStatic = require("ffprobe-static");
+const { isSupportedFileType } = require("../util");
+const { ffprobe } = require("./ffprobe");
 
 async function getSongMetadata(path) {
   return new Promise((resolve, reject) => {

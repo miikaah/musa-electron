@@ -6,7 +6,7 @@ module.exports = {
   modulePathIgnorePatterns: [
     "<rootDir>/coverage/",
     "<rootDir>/devdist/",
-    "<rootDir>/dist/"
+    "<rootDir>/dist/",
   ],
   coveragePathIgnorePatterns: [
     "(.*).json",
@@ -16,7 +16,7 @@ module.exports = {
     "<rootDir>/src/test/mocks/",
     "<rootDir>/src/jestSetup.ts",
     "<rootDir>/jest.config.js",
-    "<rootDir>/mockIndex.js"
+    "<rootDir>/mockIndex.js",
   ],
   coverageReporters: ["html", "lcovonly", "text-summary"],
   coverageThreshold: {
@@ -24,7 +24,7 @@ module.exports = {
       branches: 100,
       functions: 100,
       lines: 100,
-      statements: 100
-    }
-  }
+      statements: 100,
+    },
+  },
 };

@@ -1,7 +1,5 @@
 {
-  "extends": [
-    "eslint:recommended"
-  ],
+  "extends": ["eslint:recommended"],
   "env": {
     "node": true,
     "es6": true,
@@ -12,9 +10,8 @@
   },
   "rules": {
     "semi": "off",
-    "no-console": [
-      "warn", { allow: ["error"] }
-    ],
-    "no-extra-semi": "off"
+    "no-console": ["warn", { "allow": ["error"] }],
+    "no-extra-semi": "off",
+    "no-async-promise-executor": "off"
   }
 }

@@ -10,14 +10,20 @@ const {
   endsWith,
 } = require("lodash");
 const { getSongMetadata } = require("./metadata");
-const { isSupportedFileType, isHiddenFile } = require("./util");
+const { isSupportedFileType, isHiddenFile } = require("../util");
 
 const Bottleneck = require("bottleneck");
 
 const INIT = "INIT";
 const UPDATE_LIBRARY_LISTINGS = "UPDATE_LIBRARY_LISTINGS";
 
-const bottleneck = new Bottleneck({ maxConcurrent: 12 });
+const cpus = require("os").cpus().length;
+
+// The thread pool is running at concurrency of 4 so this is
+// actually 4 * 3 = 12 simultaneous processes at maximum
+const bottleneck = new Bottleneck({
+  maxConcurrent: cpus < 3 ? cpus : 3,
+});
 
 async function create(obj) {
   switch (obj.msg) {
@@ -32,17 +38,6 @@ async function create(obj) {
 async function init({ path, folderName }) {
   return scanArtistFolder(path, folderName);
 }
-
-// For debugging
-process.on("message", async (msg) => {
-  try {
-    const result = await create(msg);
-    process.send(JSON.stringify(result));
-  } catch (e) {
-    console.error("DEBUG", e);
-    process.send(JSON.stringify(e));
-  }
-});
 
 async function scanArtistFolder(path, folderName) {
   return new Promise((resolve, reject) => {

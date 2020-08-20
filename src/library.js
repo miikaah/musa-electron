@@ -9,22 +9,20 @@ const {
   defaultTo,
   uniq,
 } = require("lodash");
-const { isWatchableFile, isHiddenFile } = require("./util");
-const { INIT, UPDATE_LIBRARY_LISTINGS } = require("./scanner");
-const { requireTaskPool } = require("electron-remote");
 const fs = require("fs");
 const { join, sep } = require("path");
-
-const Scanner = requireTaskPool(require.resolve("./scanner.js"));
+const { isWatchableFile, isHiddenFile } = require("./util");
+const { INIT, UPDATE_LIBRARY_LISTINGS } = require("./scanner/scanner");
+const { createThread } = require("./thread/thread");
 
 const WATCHER_TIMEOUT = 3000;
 
 let mainWindow;
 const logToRenderer = (payload) => {
-  if (process.env.IS_DEV) mainWindow.webContents.send("log", payload);
+  mainWindow.webContents.send("log", payload);
 };
 const errorToRenderer = (payload) => {
-  if (process.env.IS_DEV) mainWindow.webContents.send("error", payload);
+  mainWindow.webContents.send("error", payload);
 };
 
 function init(_window) {
@@ -202,35 +200,22 @@ async function runInitialScan(event, musicLibraryPaths = []) {
       await Promise.all(
         allFiles[i].map(async (file) => {
           try {
-            const listing = await Scanner.create({
+            const listing = await createThread({
               msg,
               payload: { path: join(path, file.name), folderName: file.name },
             });
             counter++;
             event.sender.send("libraryListing", listing);
             event.sender.send("updateInitialScan", counter);
-            // For debugging
-            // console.log(file);
-            // const child = require("child_process").fork("./src/scanner.js");
-            // child.send({
-            //   msg,
-            //   payload: { path: join(path, file.name), folderName: file.name }
-            // });
-            // // This callback breaks progress bar in frontend
-            // child.on("message", msg => {
-            //   const listing = JSON.parse(msg);
-            //   counter++;
-            //   event.sender.send("libraryListing", listing);
-            //   event.sender.send("updateInitialScan", counter);
-            // });
           } catch (e) {
-            console.error(e);
+            console.error("(Scan Error)", e);
             errorToRenderer(e.message);
           }
         })
       );
     })
   );
+  console.log("endInitialScan:", allFilesLength);
   event.sender.send("endInitialScan");
 }
 
@@ -315,30 +300,12 @@ function getLibraryPathFromPath(path, musicLibraryPaths) {
 
 async function runInBackgroud(event, eventName, msg, payload) {
   return runInHiddenBrowserWindow(event, eventName, msg, payload);
-
-  // For debugging
-  // return new Promise(resolve => {
-  //   const child = require("child_process").fork("./src/scanner.js");
-  //   child.send({ msg, payload });
-  //   // This callback breaks progress bar in frontend
-  //   child.on("message", msg => {
-  //     const result = JSON.parse(msg);
-  //
-  //     if (isNonExistantArtist(result) || isRuntimeArtistDeletion(result)) {
-  //       event.sender.send("deleteLibraryListing", payload.path);
-  //       return resolve(result);
-  //     }
-  //
-  //     event.sender.send(eventName, result);
-  //     resolve(result);
-  //   });
-  // });
 }
 
 async function runInHiddenBrowserWindow(event, eventName, msg, payload) {
   return new Promise(async (resolve, reject) => {
     try {
-      const result = await Scanner.create({ msg, payload });
+      const result = await createThread({ msg, payload });
 
       if (isNonExistantArtist(result) || isRuntimeArtistDeletion(result)) {
         event.sender.send("deleteLibraryListing", payload.path);
