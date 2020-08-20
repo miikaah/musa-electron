@@ -11,6 +11,7 @@ const {
 } = require("lodash");
 const fs = require("fs");
 const { join, sep } = require("path");
+const Bottleneck = require("bottleneck");
 const { isWatchableFile, isHiddenFile } = require("./util");
 const { INIT, UPDATE_LIBRARY_LISTINGS } = require("./scanner/scanner");
 const { createThread } = require("./thread/thread");
@@ -179,6 +180,12 @@ function initLibrary(
   });
 }
 
+const cpus = require("os").cpus().length;
+
+const bottleneck = new Bottleneck({
+  maxConcurrent: cpus < 4 ? cpus : 4,
+});
+
 async function runInitialScan(event, musicLibraryPaths = []) {
   console.log("Initial scan: ", musicLibraryPaths);
   if (musicLibraryPaths.length < 1) {
@@ -197,8 +204,8 @@ async function runInitialScan(event, musicLibraryPaths = []) {
   event.sender.send("startInitialScan", allFilesLength);
   await Promise.all(
     musicLibraryPaths.map(async (path, i) => {
-      await Promise.all(
-        allFiles[i].map(async (file) => {
+      const tasks = allFiles[i].map((file) => {
+        return bottleneck.schedule(async () => {
           try {
             const listing = await createThread({
               msg,
@@ -211,8 +218,9 @@ async function runInitialScan(event, musicLibraryPaths = []) {
             console.error("(Scan Error)", e);
             errorToRenderer(e.message);
           }
-        })
-      );
+        });
+      });
+      return Promise.all(tasks);
     })
   );
   console.log("endInitialScan:", counter);

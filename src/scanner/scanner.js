@@ -20,7 +20,10 @@ const UPDATE_LIBRARY_LISTINGS = "UPDATE_LIBRARY_LISTINGS";
 const cpus = require("os").cpus().length;
 
 // The thread pool is running at concurrency of 4 so this is
-// actually 4 * 3 = 12 simultaneous processes at maximum
+// actually 4 * 3 = 12 simultaneous processes at maximum.
+//
+// On Windows this is 3 * 12 since Windows spawns
+// two helper processes  for ffprobe.
 const bottleneck = new Bottleneck({
   maxConcurrent: cpus < 3 ? cpus : 3,
 });
