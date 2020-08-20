@@ -17,7 +17,6 @@ const options = {
     nodeIntegrationInWorker: true,
     nodeIntegrationInSubFrames: true,
     devTools: true,
-    backgroundThrottling: false,
     webSecurity: false,
   },
 };

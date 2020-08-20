@@ -35,14 +35,12 @@ function createWindow() {
     return process.env.IS_DEV
       ? {
           nodeIntegration: true,
-          backgroundThrottling: false,
           nodeIntegrationInSubFrames: true,
           nodeIntegrationInWorker: true,
           webSecurity: false,
         }
       : {
           nodeIntegration: true,
-          backgroundThrottling: false,
           nodeIntegrationInSubFrames: true,
           nodeIntegrationInWorker: true,
           webSecurity: true,
