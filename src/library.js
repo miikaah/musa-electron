@@ -68,6 +68,7 @@ function initLibrary(
     const removedSongSet = new Set(removedSongList.map((s) => s[0]));
 
     if (!isInitialScan) {
+      console.log("Not initial scan. Update library.");
       updateLibrary(
         event,
         [
@@ -259,23 +260,13 @@ async function updateLibrary(
   }
 
   // The following block updates and deletes library listings.
-  // Because WINDOWS handles files differently, it's done like so:
   //
   // *  Updates & deletions to files inside ROOT folders
   //    is done as a simple update. The whole ROOT folder is always scanned
   //    so changes are easy to detect.
   //.
-  // *  Runtime deletion is detected as Scanner returning
-  //    an empty result.albums Array [].
-  //    Deletion message is dispatched to frontend.
-  //    WINDOWS (for some reason) doesn't delete the ROOT folder
-  //    if the executable is running.
-  //
-  // *  Deletion of a ROOT folder when the executable is not running
-  //    is detected by the Scanner returning an ENOENT code in an Error.
-  //    As scanning is based on ROOT folders this is assumed to mean
-  //    that a ROOT folder has been deleted and a deletion message
-  //    is dispatched to the frontend.
+  // *  Deletion of a ROOT folder is detected by
+  //    the Scanner returning an ENOENT code in an Error.
   //
 
   const artistPaths = getUniqArtistPaths(paths, musicLibraryPaths);
@@ -316,15 +307,14 @@ async function runInHiddenBrowserWindow(event, eventName, msg, payload) {
     try {
       const result = await createThread({ msg, payload });
 
-      if (isNonExistantArtist(result) || isRuntimeArtistDeletion(result)) {
-        event.sender.send("deleteLibraryListing", payload.path);
-        return resolve(result);
-      }
-
       event.sender.send(eventName, result);
       return resolve(result);
     } catch (e) {
-      console.error(e);
+      if (isNonExistantArtist(e)) {
+        event.sender.send("deleteLibraryListings", payload.path);
+        return resolve(e);
+      }
+      console.error("(runInHiddenBrowserWindow)", e);
       errorToRenderer(e);
       reject(e);
     }
@@ -335,12 +325,10 @@ function getStatsHash(stats) {
   return hash(pick(stats, ["mtime", "ctime", "birthtime"]));
 }
 
-function isNonExistantArtist(result) {
-  return result && !isEmpty(result.code) && result.code === "ENOENT";
-}
-
-function isRuntimeArtistDeletion(result) {
-  return result && isEmpty(result.albums);
+function isNonExistantArtist(e) {
+  return (
+    e && typeof e.toString === "function" && e.toString().includes("ENOENT")
+  );
 }
 
 module.exports = {
