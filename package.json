@@ -32,19 +32,19 @@
     "electron": "9.4.0",
     "electron-packager": "15.0.0",
     "electron-rebuild": "1.11.0",
-    "eslint": "^7.7.0",
+    "eslint": "^7.32.0",
     "husky": "^7.0.1",
     "jest": "^26.4.0",
     "lint-staged": "^10.2.11",
-    "nodemon": "^2.0.4",
-    "prettier": "^2.0.5"
+    "nodemon": "^2.0.12",
+    "prettier": "^2.3.2"
   },
   "dependencies": {
     "any-shell-escape": "^0.1.1",
     "bottleneck": "^2.19.5",
-    "chokidar": "^3.4.2",
+    "chokidar": "^3.5.2",
     "ffprobe-static": "^3.0.0",
     "lodash": "^4.17.21",
-    "object-hash": "^2.0.3"
+    "object-hash": "^2.2.0"
   }
 }
