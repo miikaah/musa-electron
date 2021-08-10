@@ -13,17 +13,13 @@
     "pack:mac": "dotenv bash pack.mac.sh",
     "package:win": "electron-packager . --overwrite --platform=win32 --arch=x64 --icon=assets/icons/musa1024x1024.ico --prune=true --out=release-builds",
     "pack:win": "dotenv pack.win.bat",
-    "precommit": "lint-staged"
+    "precommit": "lint-staged",
+    "prepare": "husky install"
   },
   "lint-staged": {
     "*.{js,json,md}": [
       "prettier --write"
     ]
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "npm run precommit"
-    }
   },
   "author": "Miika Henttonen miika.henttonen@gmail.com",
   "repository": {
@@ -37,7 +33,7 @@
     "electron-packager": "15.0.0",
     "electron-rebuild": "1.11.0",
     "eslint": "^7.7.0",
-    "husky": "^4.2.5",
+    "husky": "^7.0.1",
     "jest": "^26.4.0",
     "lint-staged": "^10.2.11",
     "nodemon": "^2.0.4",
