@@ -37,12 +37,14 @@ function createWindow() {
           nodeIntegration: true,
           nodeIntegrationInSubFrames: true,
           nodeIntegrationInWorker: true,
+          contextIsolation: false,
           webSecurity: false,
         }
       : {
           nodeIntegration: true,
           nodeIntegrationInSubFrames: true,
           nodeIntegrationInWorker: true,
+          contextIsolation: false,
           webSecurity: true,
         };
   };
