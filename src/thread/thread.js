@@ -8,6 +8,7 @@ const options = {
     nodeIntegration: true,
     nodeIntegrationInWorker: true,
     nodeIntegrationInSubFrames: true,
+    contextIsolation: false,
     devTools: true,
     webSecurity: false,
   },
