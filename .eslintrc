@@ -6,11 +6,11 @@
     "jest": true
   },
   "parserOptions": {
-    "ecmaVersion": 2018
+    "ecmaVersion": 2020
   },
   "rules": {
     "semi": "off",
-    "no-console": ["warn", { "allow": ["error"] }],
+    "no-console": "off",
     "no-extra-semi": "off",
     "no-async-promise-executor": "off"
   }

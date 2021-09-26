@@ -2,21 +2,82 @@
 "use strict";
 
 const path = require("path");
-const {
-  app,
-  BrowserWindow,
-  ipcMain,
-  Menu,
-  dialog,
-  protocol,
-} = require("electron");
-const { init, initLibrary, runInitialScan } = require("./library");
-const { isUndefined } = require("lodash");
+const { app, BrowserWindow, Menu, protocol } = require("electron");
+const { traverseFileSystem } = require("./fs");
+const { createMediaCollection } = require("./media-separator");
+const { createApi } = require("./api");
 
-let mainWindow;
+const { MUSA_SRC_PATH } = process.env;
+
+const logOpStart = (title) => {
+  console.log(title);
+  console.log("----------------------");
+};
+
+const logOpReport = (start, collection, name) => {
+  console.log(`Took: ${(Date.now() - start) / 1000} seconds`);
+  console.log(`Found: ${collection.length} ${name}`);
+  console.log("----------------------\n");
+};
+
+let files;
+let artistCollection;
+let albumCollection;
+let audioCollection;
+let imageCollection;
+let artistObject;
+
+const main = async () => {
+  const totalStart = Date.now();
+
+  logOpStart("Traversing file system");
+  let start = Date.now();
+  files = await traverseFileSystem(MUSA_SRC_PATH);
+  logOpReport(start, files, "files");
+
+  logOpStart("Creating media collection");
+  start = Date.now();
+  const { artistsCol, albumsCol, audioCol, imagesCol } = createMediaCollection(
+    files,
+    MUSA_SRC_PATH,
+    true
+  );
+  artistCollection = artistsCol;
+  albumCollection = albumsCol;
+  audioCollection = audioCol;
+  imageCollection = imagesCol;
+
+  artistObject = Object.entries(artistCollection)
+    .map(([id, { name, url }]) => ({ id, name, url }))
+    .reduce((acc, artist) => {
+      const { name } = artist;
+      const label = name.charAt(0);
+
+      return {
+        ...acc,
+        [label]: [...(acc[label] || []), artist],
+      };
+    }, {});
+
+  console.log(`Took: ${(Date.now() - start) / 1000} seconds`);
+  console.log(`Found: ${Object.keys(artistCollection).length} artists`);
+  console.log(`Found: ${Object.keys(albumCollection).length} albums`);
+  console.log(`Found: ${Object.keys(audioCollection).length} songs`);
+  console.log(`Found: ${Object.keys(imageCollection).length} images`);
+  console.log("----------------------\n");
+
+  logOpStart("Startup Report");
+  console.log(`Took: ${(Date.now() - totalStart) / 1000} seconds total`);
+  console.log("----------------------\n");
+
+  createApi({ artistObject, artistCollection, albumCollection, files });
+};
+
+main();
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
+let mainWindow;
 
 function createWindow() {
   const { screen } = require("electron");
@@ -122,7 +183,11 @@ function createWindow() {
       label: "Edit",
       submenu: [
         { label: "Undo", accelerator: "CmdOrCtrl+Z", selector: "undo:" },
-        { label: "Redo", accelerator: "Shift+CmdOrCtrl+Z", selector: "redo:" },
+        {
+          label: "Redo",
+          accelerator: "Shift+CmdOrCtrl+Z",
+          selector: "redo:",
+        },
         { type: "separator" },
         { label: "Cut", accelerator: "CmdOrCtrl+X", selector: "cut:" },
         { label: "Copy", accelerator: "CmdOrCtrl+C", selector: "copy:" },
@@ -137,8 +202,6 @@ function createWindow() {
   ];
 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
-
-  init(mainWindow);
 }
 
 // This method will be called when Electron has finished
@@ -161,24 +224,4 @@ app.on("activate", function () {
   if (mainWindow === null) {
     createWindow();
   }
-});
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
-
-ipcMain.on("initLibrary", initLibrary);
-ipcMain.on("runInitialScan", runInitialScan);
-
-ipcMain.on("addMusicLibraryPath", (event, songList, libPaths = []) => {
-  const paths = dialog.showOpenDialogSync({ properties: ["openDirectory"] });
-
-  if (isUndefined(paths)) return;
-
-  const newPath = paths[0];
-  event.sender.send("addMusicLibraryPath", newPath);
-  initLibrary(event, songList, [...libPaths, newPath]);
-});
-
-ipcMain.on("removeMusicLibraryPath", (event, songList, paths, deletedPath) => {
-  initLibrary(event, songList, paths, deletedPath);
 });
