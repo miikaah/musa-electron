@@ -39,10 +39,10 @@ const createApi = async ({
     event.sender.send("musa:album:response:AppMain", album);
   });
 
-  ipc.on("musa:song:request", async (event, id) => {
-    const song = await getAudioById(audioCollection, albumCollection, id);
+  ipc.on("musa:audio:request", async (event, id) => {
+    const audio = await getAudioById(audioCollection, albumCollection, id);
 
-    event.sender.send("musa:song:response", song);
+    event.sender.send("musa:audio:response", audio);
   });
 
   ipc.on("musa:onInit", async (event) => {

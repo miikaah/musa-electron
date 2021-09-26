@@ -13,9 +13,6 @@ const getAudioById = async (audioCollection, albumCollection, id) => {
   const trackNo = `${dbAudio?.metadata?.track?.no || ""}`;
   const diskNo = `${dbAudio?.metadata?.disk?.no || ""}`;
   const track = `${diskNo ? `${diskNo}.` : ""}${trackNo.padStart(2, "0")}`;
-  console.log(album);
-  console.log(audio);
-  console.log(dbAudio);
 
   return {
     ...audio,
