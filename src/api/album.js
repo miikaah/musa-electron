@@ -8,6 +8,7 @@ const getAlbumById = async (albumCollection, id) => {
   }
 
   const files = await enrichAlbumFiles(album);
+  console.log(album);
 
   return {
     ...album,

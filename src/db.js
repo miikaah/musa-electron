@@ -196,7 +196,7 @@ const enrichAlbumFiles = async (album) => {
   const padLen = pad < 2 ? 2 : pad;
 
   return Promise.all(
-    album.files.map(async ({ id, name: filename, url, fileUrl }) => {
+    album.files.map(async ({ id, name: filename, fileUrl }) => {
       const file = files.find((f) => f.path_id === id);
       const name = file?.metadata?.title || filename;
       const trackNo = `${file?.metadata?.track?.no || ""}`;
@@ -207,10 +207,9 @@ const enrichAlbumFiles = async (album) => {
       )}`;
 
       return {
-        ...file,
+        id: file.path_id,
         name,
         track,
-        url,
         fileUrl,
         metadata: file?.metadata,
       };
