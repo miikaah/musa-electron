@@ -195,7 +195,7 @@ const enrichAlbumFiles = async (album) => {
   const pad = `${maxTrackNo}`.length;
   const padLen = pad < 2 ? 2 : pad;
 
-  return Promise.all(
+  const mergedFiles = await Promise.all(
     album.files.map(async ({ id, name: filename, fileUrl }) => {
       const file = files.find((f) => f.path_id === id);
       const name = file?.metadata?.title || filename;
@@ -215,6 +215,10 @@ const enrichAlbumFiles = async (album) => {
       };
     })
   );
+
+  mergedFiles.sort((a, b) => a.track.localeCompare(b.track));
+
+  return mergedFiles;
 };
 
 module.exports = {
