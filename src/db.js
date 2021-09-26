@@ -192,4 +192,6 @@ module.exports = {
   getAllAudios,
   upsertAudio,
   upsertAlbum,
+  getAudio,
+  getAudiosByIds,
 };

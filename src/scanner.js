@@ -4,7 +4,7 @@ const { audioExts } = require("./fs");
 const UrlSafeBase64 = require("./urlsafe-base64");
 
 const startScan = async ({ event, files, albumCollection }) => {
-  if (!files || !Array.isArray(files)) {
+  if (files) {
     console.error("Did not get files JSON");
     return;
   }
