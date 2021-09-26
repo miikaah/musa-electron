@@ -16,7 +16,7 @@ const createApi = async ({
   });
 
   ipc.on("musa:artist:request", async (event, id) => {
-    const artist = await getArtistById(artistCollection, id);
+    const artist = await getArtistById(artistCollection, albumCollection, id);
 
     event.sender.send("musa:artist:response", artist);
   });
