@@ -70,7 +70,13 @@ const main = async () => {
   console.log(`Took: ${(Date.now() - totalStart) / 1000} seconds total`);
   console.log("----------------------\n");
 
-  createApi({ artistObject, artistCollection, albumCollection, files });
+  createApi({
+    artistObject,
+    artistCollection,
+    albumCollection,
+    audioCollection,
+    files,
+  });
 };
 
 main();

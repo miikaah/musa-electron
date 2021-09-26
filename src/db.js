@@ -187,6 +187,37 @@ const getAlbum = async (id) => {
   });
 };
 
+const enrichAlbumFiles = async (album) => {
+  const audioIds = album.files.map(({ id }) => id);
+  const files = await getAudiosByIds(audioIds);
+  const trackNumbers = files.map((file) => file?.metadata?.track?.no);
+  const maxTrackNo = Math.max(...trackNumbers);
+  const pad = `${maxTrackNo}`.length;
+  const padLen = pad < 2 ? 2 : pad;
+
+  return Promise.all(
+    album.files.map(async ({ id, name: filename, url, fileUrl }) => {
+      const file = files.find((f) => f.path_id === id);
+      const name = file?.metadata?.title || filename;
+      const trackNo = `${file?.metadata?.track?.no || ""}`;
+      const diskNo = `${file?.metadata?.disk?.no || ""}`;
+      const track = `${diskNo ? `${diskNo}.` : ""}${trackNo.padStart(
+        padLen,
+        "0"
+      )}`;
+
+      return {
+        ...file,
+        name,
+        track,
+        url,
+        fileUrl,
+        metadata: file?.metadata,
+      };
+    })
+  );
+};
+
 module.exports = {
   insertAudio,
   getAllAudios,
@@ -194,4 +225,5 @@ module.exports = {
   upsertAlbum,
   getAudio,
   getAudiosByIds,
+  enrichAlbumFiles,
 };

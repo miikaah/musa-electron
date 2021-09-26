@@ -1,12 +1,14 @@
 const { ipcMain: ipc } = require("electron");
 const { getArtistById, getArtistAlbums } = require("./api/artist");
 const { getAlbumById } = require("./api/album");
+const { getAudioById } = require("./api/audio");
 const { startScan } = require("./scanner");
 
 const createApi = async ({
   artistObject,
   artistCollection,
   albumCollection,
+  audioCollection,
   files,
 }) => {
   ipc.on("musa:artists:request", (event) => {
@@ -35,6 +37,12 @@ const createApi = async ({
     const album = await getAlbumById(albumCollection, id);
 
     event.sender.send("musa:album:response:AppMain", album);
+  });
+
+  ipc.on("musa:song:request", async (event, id) => {
+    const song = await getAudioById(audioCollection, albumCollection, id);
+
+    event.sender.send("musa:song:response", song);
   });
 
   ipc.on("musa:onInit", async (event) => {

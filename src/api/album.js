@@ -1,11 +1,18 @@
-const getAlbumById = async (albumCollection, id) => {
-  const artist = albumCollection[id];
+const { enrichAlbumFiles } = require("../db");
 
-  if (!artist) {
+const getAlbumById = async (albumCollection, id) => {
+  const album = albumCollection[id];
+
+  if (!album) {
     return [];
   }
 
-  return artist;
+  const files = await enrichAlbumFiles(album);
+
+  return {
+    ...album,
+    files,
+  };
 };
 
 module.exports = {
