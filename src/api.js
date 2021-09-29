@@ -2,7 +2,13 @@ const { ipcMain: ipc } = require("electron");
 const { getArtistById, getArtistAlbums } = require("./api/artist");
 const { getAlbumById } = require("./api/album");
 const { getAudioById } = require("./api/audio");
-const { getAllThemes, getTheme, insertTheme } = require("./db");
+const {
+  getAllThemes,
+  getTheme,
+  insertTheme,
+  getSettings,
+  upsertSettings,
+} = require("./db");
 const { startScan } = require("./scanner");
 
 const createApi = async ({
@@ -75,6 +81,23 @@ const createApi = async ({
     const newTheme = await insertTheme(id, colors);
 
     event.sender.send("musa:themes:response:insert", newTheme);
+  });
+
+  ipc.on("musa:settings:request:get", async (event) => {
+    const settings = await getSettings();
+
+    if (!settings) {
+      event.sender.send("musa:settings:response:get");
+      return;
+    }
+
+    event.sender.send("musa:settings:response:get", settings.data);
+  });
+
+  ipc.on("musa:settings:request:insert", async (event, settings) => {
+    const newSettings = await upsertSettings(settings);
+
+    event.sender.send("musa:settings:response:insert", newSettings);
   });
 
   ipc.on("musa:onInit", async (event) => {

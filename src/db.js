@@ -20,6 +20,11 @@ const themeDb = new Datastore({
 });
 themeDb.loadDatabase();
 
+const settingsDb = new Datastore({
+  filename: path.join(MUSA_SRC_PATH, ".musa.settings.db"),
+});
+settingsDb.loadDatabase();
+
 const insertAudio = async (file) => {
   if (!file) {
     return;
@@ -270,6 +275,39 @@ const insertTheme = async (id, colors) => {
   });
 };
 
+const getSettings = async () => {
+  return new Promise((resolve, reject) => {
+    settingsDb.findOne({ _id: "settings" }, (err, settings) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(settings);
+      }
+    });
+  });
+};
+
+const upsertSettings = async (data) => {
+  return new Promise((resolve, reject) => {
+    settingsDb.update(
+      { _id: "settings" },
+      {
+        _id: "settings",
+        modified_at: new Date().toISOString(),
+        data,
+      },
+      { upsert: true, returnUpdatedDocs: true },
+      (err, numAffected, settings) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(settings);
+        }
+      }
+    );
+  });
+};
+
 module.exports = {
   insertAudio,
   getAllAudios,
@@ -281,4 +319,6 @@ module.exports = {
   getAllThemes,
   insertTheme,
   getTheme,
+  getSettings,
+  upsertSettings,
 };
