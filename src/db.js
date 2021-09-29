@@ -15,6 +15,11 @@ const albumDb = new Datastore({
 });
 albumDb.loadDatabase();
 
+const themeDb = new Datastore({
+  filename: path.join(MUSA_SRC_PATH, ".musa.theme.db"),
+});
+themeDb.loadDatabase();
+
 const insertAudio = async (file) => {
   if (!file) {
     return;
@@ -221,6 +226,50 @@ const enrichAlbumFiles = async (album) => {
   return mergedFiles;
 };
 
+const getAllThemes = async () => {
+  return new Promise((resolve, reject) => {
+    themeDb.find({}, (err, themes) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(themes);
+      }
+    });
+  });
+};
+
+const getTheme = async (id) => {
+  return new Promise((resolve, reject) => {
+    themeDb.findOne({ path_id: id }, (err, theme) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(theme);
+      }
+    });
+  });
+};
+
+const insertTheme = async (id, colors) => {
+  return new Promise((resolve, reject) => {
+    themeDb.insert(
+      {
+        _id: id,
+        path_id: id,
+        modified_at: new Date().toISOString(),
+        colors,
+      },
+      (err, newTheme) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(newTheme);
+        }
+      }
+    );
+  });
+};
+
 module.exports = {
   insertAudio,
   getAllAudios,
@@ -229,4 +278,7 @@ module.exports = {
   getAudio,
   getAudiosByIds,
   enrichAlbumFiles,
+  getAllThemes,
+  insertTheme,
+  getTheme,
 };
