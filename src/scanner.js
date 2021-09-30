@@ -58,13 +58,15 @@ const startScan = async ({ event, files, albumCollection }) => {
         insertAudio(filesToInsert[i + 3]),
       ]);
 
-      process.stdout.clearLine(0);
-      process.stdout.cursorTo(0);
-      process.stdout.write(
-        `Audio insert: (${i + 1} / ${filesToInsert.length}) ` +
-          Math.trunc(((i + 1) / filesToInsert.length) * 100) +
-          "% "
-      );
+      if (process.stdout.clearLine) {
+        process.stdout.clearLine(0);
+        process.stdout.cursorTo(0);
+        process.stdout.write(
+          `Audio insert: (${i + 1} / ${filesToInsert.length}) ` +
+            Math.trunc(((i + 1) / filesToInsert.length) * 100) +
+            "% "
+        );
+      }
       event.sender.send("musa:updateScan", i);
     } catch (err) {
       console.error(err);
@@ -72,9 +74,7 @@ const startScan = async ({ event, files, albumCollection }) => {
   }
   const timeForInsertSec = (Date.now() - startInsert) / 1000;
   const insertsPerSecond =
-    timeForInsertSec > 0
-      ? Math.floor(filesToInsert.length / timeForInsertSec)
-      : 0;
+    timeForInsertSec > 0 ? Math.floor(filesToInsert.length / timeForInsertSec) : 0;
 
   if (filesToInsert.length) {
     console.log();
@@ -116,9 +116,7 @@ const startScan = async ({ event, files, albumCollection }) => {
   }
   const timeForUpdateSec = (Date.now() - startUpdate) / 1000;
   const updatesPerSecond =
-    timeForUpdateSec > 0
-      ? Math.floor(filesToUpdate.length / timeForUpdateSec)
-      : 0;
+    timeForUpdateSec > 0 ? Math.floor(filesToUpdate.length / timeForUpdateSec) : 0;
   console.log(`Audio updates took: ${timeForUpdateSec} seconds`);
   console.log(`${updatesPerSecond} updates per second\n`);
   event.sender.send("musa:endScan");
@@ -141,9 +139,7 @@ const startScan = async ({ event, files, albumCollection }) => {
   }
   const timeForAlbumUpdateSec = (Date.now() - startAlbumUpdate) / 1000;
   const albumUpdatesPerSecond =
-    timeForAlbumUpdateSec > 0
-      ? Math.floor(albums.length / timeForAlbumUpdateSec)
-      : 0;
+    timeForAlbumUpdateSec > 0 ? Math.floor(albums.length / timeForAlbumUpdateSec) : 0;
   const totalTime = (Date.now() - start) / 1000;
 
   console.log(`Album updates took: ${timeForAlbumUpdateSec} seconds`);

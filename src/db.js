@@ -20,11 +20,6 @@ const themeDb = new Datastore({
 });
 themeDb.loadDatabase();
 
-const settingsDb = new Datastore({
-  filename: path.join(MUSA_SRC_PATH, ".musa.settings.db"),
-});
-settingsDb.loadDatabase();
-
 const insertAudio = async (file) => {
   if (!file) {
     return;
@@ -65,12 +60,7 @@ const upsertAudio = async (file) => {
   } else if (modifiedAt.getTime() > new Date(dbAudio.modified_at).getTime()) {
     const metadata = await getMetadata({ id, quiet });
 
-    console.log(
-      "Updating audio",
-      filename,
-      "because it was modified at",
-      modifiedAt
-    );
+    console.log("Updating audio", filename, "because it was modified at", modifiedAt);
     dbAudio.update(
       { path_id: id },
       {
@@ -92,9 +82,7 @@ const upsertAlbum = async (file) => {
   const albumAudioIds = album.files.map(({ id }) => id);
   const dbAlbum = await getAlbum(id);
   const dbAlbumAudios = await getAudiosByIds(albumAudioIds);
-  const modifiedAts = dbAlbumAudios.map(({ modified_at }) =>
-    new Date(modified_at).getTime()
-  );
+  const modifiedAts = dbAlbumAudios.map(({ modified_at }) => new Date(modified_at).getTime());
   const lastModificationTime = Math.max(...modifiedAts);
   const dbAlbumAudio = dbAlbumAudios[0];
 
@@ -129,15 +117,7 @@ const upsertAlbum = async (file) => {
 };
 
 const buildAlbumMetadata = (metadata) => {
-  const {
-    year,
-    album,
-    artists,
-    artist,
-    albumArtist,
-    genre,
-    dynamicRangeAlbum,
-  } = metadata;
+  const { year, album, artists, artist, albumArtist, genre, dynamicRangeAlbum } = metadata;
   return {
     year,
     album,
@@ -211,10 +191,7 @@ const enrichAlbumFiles = async (album) => {
       const name = file?.metadata?.title || filename;
       const trackNo = `${file?.metadata?.track?.no || ""}`;
       const diskNo = `${file?.metadata?.disk?.no || ""}`;
-      const track = `${diskNo ? `${diskNo}.` : ""}${trackNo.padStart(
-        padLen,
-        "0"
-      )}`;
+      const track = `${diskNo ? `${diskNo}.` : ""}${trackNo.padStart(padLen, "0")}`;
 
       return {
         id: file.path_id,
@@ -275,39 +252,6 @@ const insertTheme = async (id, colors) => {
   });
 };
 
-const getSettings = async () => {
-  return new Promise((resolve, reject) => {
-    settingsDb.findOne({ _id: "settings" }, (err, settings) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(settings);
-      }
-    });
-  });
-};
-
-const upsertSettings = async (data) => {
-  return new Promise((resolve, reject) => {
-    settingsDb.update(
-      { _id: "settings" },
-      {
-        _id: "settings",
-        modified_at: new Date().toISOString(),
-        data,
-      },
-      { upsert: true, returnUpdatedDocs: true },
-      (err, numAffected, settings) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(settings);
-        }
-      }
-    );
-  });
-};
-
 module.exports = {
   insertAudio,
   getAllAudios,
@@ -319,6 +263,4 @@ module.exports = {
   getAllThemes,
   insertTheme,
   getTheme,
-  getSettings,
-  upsertSettings,
 };
