@@ -153,7 +153,7 @@ const startScan = async ({ event, files, albumCollection }) => {
   console.log(`Total time: ${totalTime} seconds`);
   console.log("----------------------\n");
   event.sender.send("musa:scan:end");
-  event.sender.send("musa:scan:complete");
+  event.sender.send("musa:scan:complete", Date.now());
 };
 
 module.exports = {

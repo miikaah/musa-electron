@@ -5,6 +5,7 @@ const { getState, setState } = require("./fs.state");
 const { createMediaCollection } = require("./media-separator");
 const { createApi } = require("./api");
 const { initDb } = require("./db");
+const { startScan } = require("./scanner");
 
 const logOpStart = (title) => {
   console.log(title);
@@ -48,10 +49,17 @@ ipc.on("musa:addMusicLibraryPath:request", async (event) => {
 
   event.sender.send("musa:addMusicLibraryPath:response", newPath);
   await setState({ musicLibraryPath: newPath });
-  event.sender.send("musa:ready");
+  await init(event);
 });
 
-ipc.on("musa:onInit", async (event) => {
+// This is very convoluted
+// * let musa:ready event control how scan gets launched via frontend
+//
+// *** Danger of launching multiple scans at the same time
+//
+// TODO: Perhaps a heuristic like 5 min interval of doing full update during startup?
+//
+const init = async (event) => {
   const state = await getState();
   const { musicLibraryPath } = state;
   console.log("state", state, "\n");
@@ -117,7 +125,8 @@ ipc.on("musa:onInit", async (event) => {
   });
 
   event.sender.send("musa:ready");
-});
+};
+ipc.once("musa:onInit", init);
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.

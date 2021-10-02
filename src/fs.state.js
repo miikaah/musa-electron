@@ -10,11 +10,17 @@ const getState = async () => {
   const file = await fs
     .readFile(path.join(homedir, ".musa.state.json"), { encoding: "utf-8" })
     .catch((err) => {
-      setState({});
-      console.error(err);
+      console.error("State file doesn't exist", err);
       return "{}";
     });
-  const state = JSON.parse(file);
+
+  let state;
+  try {
+    state = JSON.parse(file);
+  } catch (e) {
+    console.error("State file is not JSON", e);
+    return "{}";
+  }
 
   return state;
 };
