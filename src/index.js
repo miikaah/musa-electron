@@ -5,7 +5,6 @@ const { getState, setState } = require("./fs.state");
 const { createMediaCollection } = require("./media-separator");
 const { createApi } = require("./api");
 const { initDb } = require("./db");
-const { startScan } = require("./scanner");
 
 const logOpStart = (title) => {
   console.log(title);
