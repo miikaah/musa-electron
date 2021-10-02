@@ -177,6 +177,33 @@ const getAlbum = async (id) => {
   });
 };
 
+const enrichAlbums = async (albumCollection, artist) => {
+  return Promise.all(
+    artist.albums.map(async ({ id, name, url, coverUrl, firstAlbumAudio }) => {
+      let year = null;
+      let albumName = null;
+
+      if (firstAlbumAudio && firstAlbumAudio.id) {
+        const audio = await getAudio(firstAlbumAudio.id);
+
+        year = audio?.metadata?.year;
+        albumName = audio?.metadata?.album;
+      }
+
+      const files = await enrichAlbumFiles(albumCollection[id]);
+
+      return {
+        id,
+        name: albumName || name,
+        url,
+        coverUrl,
+        year,
+        files,
+      };
+    })
+  );
+};
+
 const enrichAlbumFiles = async (album) => {
   const audioIds = album.files.map(({ id }) => id);
   const files = await getAudiosByIds(audioIds);
@@ -256,9 +283,11 @@ module.exports = {
   insertAudio,
   getAllAudios,
   upsertAudio,
+  getAlbum,
   upsertAlbum,
   getAudio,
   getAudiosByIds,
+  enrichAlbums,
   enrichAlbumFiles,
   getAllThemes,
   insertTheme,

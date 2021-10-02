@@ -2,13 +2,8 @@ const { ipcMain: ipc } = require("electron");
 const { getArtistById, getArtistAlbums } = require("./api/artist");
 const { getAlbumById } = require("./api/album");
 const { getAudioById } = require("./api/audio");
-const {
-  getAllThemes,
-  getTheme,
-  insertTheme,
-  getSettings,
-  upsertSettings,
-} = require("./db");
+const { find } = require("./api/find");
+const { getAllThemes, getTheme, insertTheme } = require("./db");
 const { startScan } = require("./scanner");
 
 const createApi = async ({
@@ -18,6 +13,9 @@ const createApi = async ({
   audioCollection,
   files,
 }) => {
+  const artistsForFind = Object.entries(artistCollection).map(([id, a]) => ({ ...a, id }));
+  const albumsForFind = Object.entries(albumCollection).map(([id, a]) => ({ ...a, id }));
+
   ipc.on("musa:artists:request", (event) => {
     event.sender.send("musa:artists:response", artistObject);
   });
@@ -84,20 +82,33 @@ const createApi = async ({
   });
 
   ipc.on("musa:settings:request:get", async (event) => {
-    const settings = await getSettings();
-
-    if (!settings) {
-      event.sender.send("musa:settings:response:get");
-      return;
-    }
-
-    event.sender.send("musa:settings:response:get", settings.data);
+    // const settings = await getSettings();
+    //
+    // if (!settings) {
+    //   event.sender.send("musa:settings:response:get");
+    //   return;
+    // }
+    //
+    // event.sender.send("musa:settings:response:get", settings.data);
   });
 
   ipc.on("musa:settings:request:insert", async (event, settings) => {
-    const newSettings = await upsertSettings(settings);
+    // const newSettings = await upsertSettings(settings);
+    //
+    // event.sender.send("musa:settings:response:insert", newSettings);
+  });
 
-    event.sender.send("musa:settings:response:insert", newSettings);
+  ipc.on("musa:find:request", async (event, query) => {
+    const result = await find({
+      artistsForFind,
+      albumsForFind,
+      artistCollection,
+      albumCollection,
+      audioCollection,
+      query,
+    });
+
+    event.sender.send("musa:find:response", result);
   });
 
   ipc.on("musa:onInit", async (event) => {

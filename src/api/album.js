@@ -1,4 +1,4 @@
-const { enrichAlbumFiles } = require("../db");
+const { getAlbum, enrichAlbumFiles } = require("../db");
 
 const getAlbumById = async (albumCollection, id) => {
   const album = albumCollection[id];
@@ -7,10 +7,12 @@ const getAlbumById = async (albumCollection, id) => {
     return [];
   }
 
+  const dbAlbum = await getAlbum(id);
   const files = await enrichAlbumFiles(album);
 
   return {
     ...album,
+    metadata: dbAlbum?.metadata,
     files,
   };
 };

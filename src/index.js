@@ -92,10 +92,7 @@ function createWindow() {
   if (process.env.IS_DEV && allDisplays.length > 1) {
     allDisplays.forEach(
       (display) =>
-        (biggestDisplay =
-          display.size.width > biggestDisplay.size.width
-            ? display
-            : biggestDisplay)
+        (biggestDisplay = display.size.width > biggestDisplay.size.width ? display : biggestDisplay)
     );
   }
   const getWebPreferencesByEnv = () => {
@@ -170,8 +167,7 @@ function createWindow() {
         },
         {
           label: "Toggle Developer Tools",
-          accelerator:
-            process.platform === "darwin" ? "Alt+Command+I" : "Ctrl+Shift+I",
+          accelerator: process.platform === "darwin" ? "Alt+Command+I" : "Ctrl+Shift+I",
           click: function (item, focusedWindow) {
             if (focusedWindow) focusedWindow.toggleDevTools();
           },

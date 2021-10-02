@@ -1,4 +1,4 @@
-const { getAudio, enrichAlbumFiles } = require("../db");
+const { getAudio, enrichAlbums } = require("../db");
 
 const getArtistById = async (artistCollection, albumCollection, id) => {
   const artist = artistCollection[id];
@@ -42,30 +42,7 @@ const getArtistAlbums = async (artistCollection, albumCollection, id) => {
     return [];
   }
 
-  const albums = await Promise.all(
-    artist.albums.map(async ({ id, name, url, coverUrl, firstAlbumAudio }) => {
-      let year = null;
-      let albumName = null;
-
-      if (firstAlbumAudio && firstAlbumAudio.id) {
-        const audio = await getAudio(firstAlbumAudio.id);
-
-        year = audio?.metadata?.year;
-        albumName = audio?.metadata?.album;
-      }
-
-      const files = await enrichAlbumFiles(albumCollection[id]);
-
-      return {
-        id,
-        name: albumName || name,
-        url,
-        coverUrl,
-        year,
-        files,
-      };
-    })
-  );
+  const albums = await enrichAlbums(albumCollection, artist);
 
   return {
     ...artist,

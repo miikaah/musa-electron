@@ -33,6 +33,7 @@
     "chokidar": "^3.5.2",
     "env-cmd": "^10.1.0",
     "ffprobe-static": "^3.0.0",
+    "fuzzysort": "^1.1.4",
     "lodash": "^4.17.21",
     "music-metadata": "^7.11.4",
     "nedb": "^1.8.0",
