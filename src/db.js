@@ -4,28 +4,35 @@ const Datastore = require("nedb");
 const { getMetadata } = require("./metadata");
 const UrlSafeBase64 = require("./urlsafe-base64");
 
-const { MUSA_SRC_PATH } = process.env;
-const audioDb = new Datastore({
-  filename: path.join(MUSA_SRC_PATH, ".musa.audio.db"),
-});
-audioDb.loadDatabase();
+let audioDb;
+let albumDb;
+let themeDb;
+let libPath;
+const initDb = (libraryPath) => {
+  libPath = libraryPath;
 
-const albumDb = new Datastore({
-  filename: path.join(MUSA_SRC_PATH, ".musa.album.db"),
-});
-albumDb.loadDatabase();
+  audioDb = new Datastore({
+    filename: path.join(libraryPath, ".musa.audio.db"),
+  });
+  audioDb.loadDatabase();
 
-const themeDb = new Datastore({
-  filename: path.join(MUSA_SRC_PATH, ".musa.theme.db"),
-});
-themeDb.loadDatabase();
+  albumDb = new Datastore({
+    filename: path.join(libraryPath, ".musa.album.db"),
+  });
+  albumDb.loadDatabase();
+
+  themeDb = new Datastore({
+    filename: path.join(libraryPath, ".musa.theme.db"),
+  });
+  themeDb.loadDatabase();
+};
 
 const insertAudio = async (file) => {
   if (!file) {
     return;
   }
   const { id, filename } = file;
-  const metadata = await getMetadata({ id, quiet: true });
+  const metadata = await getMetadata(libPath, { id, quiet: true });
 
   audioDb.insert({
     path_id: id,
@@ -42,13 +49,13 @@ const upsertAudio = async (file) => {
     return;
   }
 
-  const filepath = path.join(MUSA_SRC_PATH, UrlSafeBase64.decode(id));
+  const filepath = path.join(libPath, UrlSafeBase64.decode(id));
   const stats = await fs.stat(filepath);
   const modifiedAt = new Date(stats.mtimeMs);
   const dbAudio = await getAudio(id);
 
   if (!dbAudio) {
-    const metadata = await getMetadata({ id, quiet });
+    const metadata = await getMetadata(libPath, { id, quiet });
 
     console.log("Inserting audio", id);
     audioDb.insert({
@@ -58,7 +65,7 @@ const upsertAudio = async (file) => {
       metadata,
     });
   } else if (modifiedAt.getTime() > new Date(dbAudio.modified_at).getTime()) {
-    const metadata = await getMetadata({ id, quiet });
+    const metadata = await getMetadata(libPath, { id, quiet });
 
     console.log("Updating audio", filename, "because it was modified at", modifiedAt);
     dbAudio.update(
@@ -292,4 +299,5 @@ module.exports = {
   getAllThemes,
   insertTheme,
   getTheme,
+  initDb,
 };

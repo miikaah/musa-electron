@@ -3,8 +3,14 @@ const { getAllAudios, insertAudio, upsertAudio, upsertAlbum } = require("./db");
 const { audioExts } = require("./fs");
 const UrlSafeBase64 = require("./urlsafe-base64");
 
+const scanColor = {
+  RED: "#f00",
+  YELLOW: "#ff0",
+  GREEN: "#0f0",
+};
+
 const startScan = async ({ event, files, albumCollection }) => {
-  if (files) {
+  if (!files) {
     console.error("Did not get files JSON");
     return;
   }
@@ -42,7 +48,7 @@ const startScan = async ({ event, files, albumCollection }) => {
   console.log(`Albums to update: ${albums.length}`);
   console.log("----------------------");
 
-  event.sender.send("musa:startScan", filesToInsert.length);
+  event.sender.send("musa:scan:start", filesToInsert.length, scanColor.RED);
 
   if (filesToInsert.length) {
     console.log();
@@ -67,7 +73,7 @@ const startScan = async ({ event, files, albumCollection }) => {
             "% "
         );
       }
-      event.sender.send("musa:updateScan", i);
+      event.sender.send("musa:scan:update", i);
     } catch (err) {
       console.error(err);
     }
@@ -84,9 +90,9 @@ const startScan = async ({ event, files, albumCollection }) => {
   console.log("----------------------");
   console.log(`Audio inserts took: ${timeForInsertSec} seconds`);
   console.log(`${insertsPerSecond} inserts per second\n`);
-  event.sender.send("musa:endScan");
+  event.sender.send("musa:scan:end");
 
-  event.sender.send("musa:startScan", filesToUpdate.length);
+  event.sender.send("musa:scan:start", filesToUpdate.length, scanColor.YELLOW);
 
   const startUpdate = Date.now();
   for (let i = 0; i < filesToUpdate.length; i += 4) {
@@ -109,7 +115,7 @@ const startScan = async ({ event, files, albumCollection }) => {
           quiet: true,
         }),
       ]);
-      event.sender.send("musa:updateScan", i);
+      event.sender.send("musa:scan:update", i);
     } catch (err) {
       console.error(err);
     }
@@ -119,9 +125,9 @@ const startScan = async ({ event, files, albumCollection }) => {
     timeForUpdateSec > 0 ? Math.floor(filesToUpdate.length / timeForUpdateSec) : 0;
   console.log(`Audio updates took: ${timeForUpdateSec} seconds`);
   console.log(`${updatesPerSecond} updates per second\n`);
-  event.sender.send("musa:endScan");
+  event.sender.send("musa:scan:end");
 
-  event.sender.send("musa:startScan", albums.length);
+  event.sender.send("musa:scan:start", albums.length, scanColor.GREEN);
 
   const startAlbumUpdate = Date.now();
   for (let i = 0; i < albums.length; i += 4) {
@@ -132,7 +138,7 @@ const startScan = async ({ event, files, albumCollection }) => {
         upsertAlbum(albums[i + 2]),
         upsertAlbum(albums[i + 3]),
       ]);
-      event.sender.send("musa:updateScan", i);
+      event.sender.send("musa:scan:update", i);
     } catch (err) {
       console.error(err);
     }
@@ -146,7 +152,8 @@ const startScan = async ({ event, files, albumCollection }) => {
   console.log(`${albumUpdatesPerSecond} updates per second\n`);
   console.log(`Total time: ${totalTime} seconds`);
   console.log("----------------------\n");
-  event.sender.send("musa:endScan");
+  event.sender.send("musa:scan:end");
+  event.sender.send("musa:scan:complete");
 };
 
 module.exports = {

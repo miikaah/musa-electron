@@ -1,13 +1,10 @@
-// Modules to control application life and create native browser window
-"use strict";
-
+const { app, BrowserWindow, Menu, protocol, ipcMain: ipc, dialog } = require("electron");
 const path = require("path");
-const { app, BrowserWindow, Menu, protocol } = require("electron");
 const { traverseFileSystem } = require("./fs");
+const { getState, setState } = require("./fs.state");
 const { createMediaCollection } = require("./media-separator");
 const { createApi } = require("./api");
-
-const { MUSA_SRC_PATH } = process.env;
+const { initDb } = require("./db");
 
 const logOpStart = (title) => {
   console.log(title);
@@ -27,19 +24,58 @@ let audioCollection;
 let imageCollection;
 let artistObject;
 
-const main = async () => {
+ipc.on("musa:settings:request:get", async (event) => {
+  const settings = await getState();
+
+  event.sender.send("musa:settings:response:get", settings);
+});
+
+ipc.on("musa:settings:request:insert", async (event, settings) => {
+  await setState(settings);
+
+  event.sender.send("musa:settings:response:insert");
+});
+
+ipc.on("musa:addMusicLibraryPath:request", async (event) => {
+  const paths = dialog.showOpenDialogSync({ properties: ["openDirectory"] });
+
+  if (!Array.isArray(paths) || paths.length < 1) {
+    return;
+  }
+
+  const newPath = paths[0];
+  console.log(`New music library path added: ${newPath}\n`);
+
+  event.sender.send("musa:addMusicLibraryPath:response", newPath);
+  await setState({ musicLibraryPath: newPath });
+  event.sender.send("musa:ready");
+});
+
+ipc.on("musa:onInit", async (event) => {
+  const state = await getState();
+  const { musicLibraryPath } = state;
+  console.log("state", state, "\n");
+
+  if (!musicLibraryPath) {
+    const warning =
+      "No music library path specified. Go to settings and add it to start scanning.\n";
+    console.log(warning);
+
+    return;
+  }
+
   const totalStart = Date.now();
 
   logOpStart("Traversing file system");
   let start = Date.now();
-  files = await traverseFileSystem(MUSA_SRC_PATH);
+  files = await traverseFileSystem(musicLibraryPath);
   logOpReport(start, files, "files");
 
   logOpStart("Creating media collection");
   start = Date.now();
   const { artistsCol, albumsCol, audioCol, imagesCol } = createMediaCollection(
     files,
-    MUSA_SRC_PATH,
+    musicLibraryPath,
     true
   );
   artistCollection = artistsCol;
@@ -70,6 +106,8 @@ const main = async () => {
   console.log(`Took: ${(Date.now() - totalStart) / 1000} seconds total`);
   console.log("----------------------\n");
 
+  initDb(musicLibraryPath);
+
   createApi({
     artistObject,
     artistCollection,
@@ -77,9 +115,9 @@ const main = async () => {
     audioCollection,
     files,
   });
-};
 
-main();
+  event.sender.send("musa:ready");
+});
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.

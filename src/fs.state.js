@@ -1,18 +1,19 @@
 const fs = require("fs/promises");
 const path = require("path");
-
-const { MUSA_SRC_PATH } = process.env;
-const filename = path.join(MUSA_SRC_PATH, ".musa.state.json");
+const homedir = require("os").homedir();
 
 const setState = async (state) => {
-  return fs.writeFile(filename, JSON.stringify(state, null, 2));
+  return fs.writeFile(path.join(homedir, ".musa.state.json"), JSON.stringify(state, null, 2));
 };
 
 const getState = async () => {
-  const file = await fs.readFile(filename, { encoding: "utf-8" }).catch((err) => {
-    console.error(err);
-    return "{}";
-  });
+  const file = await fs
+    .readFile(path.join(homedir, ".musa.state.json"), { encoding: "utf-8" })
+    .catch((err) => {
+      setState({});
+      console.error(err);
+      return "{}";
+    });
   const state = JSON.parse(file);
 
   return state;

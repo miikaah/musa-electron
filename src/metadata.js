@@ -2,8 +2,6 @@ const musicMetadata = require("music-metadata");
 const path = require("path");
 const UrlSafeBase64 = require("./urlsafe-base64");
 
-const { MUSA_SRC_PATH = "" } = process.env;
-
 const readMetadata = async (filepath) => {
   let metadata = { format: {}, native: { "ID3v2.3": [] }, common: {} };
 
@@ -17,32 +15,24 @@ const readMetadata = async (filepath) => {
   return metadata;
 };
 
-const getMetadata = async ({ id, quiet = false }) => {
-  const audioPath = path.join(MUSA_SRC_PATH, UrlSafeBase64.decode(id));
+const getMetadata = async (libPath, { id, quiet = false }) => {
+  const audioPath = path.join(libPath, UrlSafeBase64.decode(id));
   const { format, native, common } = await readMetadata(audioPath);
-  const id3v2x =
-    native["ID3v2.4"] || native["ID3v2.3"] || native["ID3v1"] || [];
+  const id3v2x = native["ID3v2.4"] || native["ID3v2.3"] || native["ID3v1"] || [];
   const { vorbis = [] } = native;
 
   let dynamicRangeTags = {};
   if (id3v2x.length) {
     // mp3
     dynamicRangeTags = {
-      dynamicRange: (
-        id3v2x.find((tag) => tag.id === "TXXX:DYNAMIC RANGE") || {}
-      ).value,
-      dynamicRangeAlbum: (
-        id3v2x.find((tag) => tag.id === "TXXX:ALBUM DYNAMIC RANGE") || {}
-      ).value,
+      dynamicRange: (id3v2x.find((tag) => tag.id === "TXXX:DYNAMIC RANGE") || {}).value,
+      dynamicRangeAlbum: (id3v2x.find((tag) => tag.id === "TXXX:ALBUM DYNAMIC RANGE") || {}).value,
     };
   } else if (vorbis.length) {
     // flac
     dynamicRangeTags = {
-      dynamicRange: (vorbis.find((tag) => tag.id === "DYNAMIC RANGE") || {})
-        .value,
-      dynamicRangeAlbum: (
-        vorbis.find((tag) => tag.id === "ALBUM DYNAMIC RANGE") || {}
-      ).value,
+      dynamicRange: (vorbis.find((tag) => tag.id === "DYNAMIC RANGE") || {}).value,
+      dynamicRangeAlbum: (vorbis.find((tag) => tag.id === "ALBUM DYNAMIC RANGE") || {}).value,
     };
   }
 

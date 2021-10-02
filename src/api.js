@@ -5,15 +5,8 @@ const { getAudioById } = require("./api/audio");
 const { find } = require("./api/find");
 const { getAllThemes, getTheme, insertTheme } = require("./db");
 const { startScan } = require("./scanner");
-const { setState, getState } = require("./fs.state");
 
-const createApi = async ({
-  artistObject,
-  artistCollection,
-  albumCollection,
-  audioCollection,
-  files,
-}) => {
+const createApi = ({ artistObject, artistCollection, albumCollection, audioCollection, files }) => {
   const artistsForFind = Object.entries(artistCollection).map(([id, a]) => ({ ...a, id }));
   const albumsForFind = Object.entries(albumCollection).map(([id, a]) => ({ ...a, id }));
 
@@ -82,18 +75,6 @@ const createApi = async ({
     event.sender.send("musa:themes:response:insert", newTheme);
   });
 
-  ipc.on("musa:settings:request:get", async (event) => {
-    const settings = await getState();
-
-    event.sender.send("musa:settings:response:get", settings);
-  });
-
-  ipc.on("musa:settings:request:insert", async (event, settings) => {
-    await setState(settings);
-
-    event.sender.send("musa:settings:response:insert");
-  });
-
   ipc.on("musa:find:request", async (event, query) => {
     const result = await find({
       artistsForFind,
@@ -107,7 +88,7 @@ const createApi = async ({
     event.sender.send("musa:find:response", result);
   });
 
-  ipc.on("musa:onInit", async (event) => {
+  ipc.on("musa:scan", async (event) => {
     await startScan({ event, files, albumCollection });
   });
 };
