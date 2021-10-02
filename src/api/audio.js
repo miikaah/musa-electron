@@ -17,7 +17,7 @@ const getAudioById = async (audioCollection, albumCollection, id) => {
   return {
     ...audio,
     name,
-    track,
+    track: track === "00" ? null : track,
     fileUrl: audio.url,
     coverUrl: album?.coverUrl,
     metadata: dbAudio?.metadata,
