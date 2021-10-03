@@ -2,13 +2,17 @@ const fs = require("fs/promises");
 const path = require("path");
 const homedir = require("os").homedir();
 
+const { NODE_ENV } = process.env;
+const isDev = NODE_ENV === "local";
+const stateFile = `${isDev ? ".dev" : ""}.musa.state.json`;
+
 const setState = async (state) => {
-  return fs.writeFile(path.join(homedir, ".musa.state.json"), JSON.stringify(state, null, 2));
+  return fs.writeFile(path.join(homedir, stateFile), JSON.stringify(state, null, 2));
 };
 
 const getState = async () => {
   const file = await fs
-    .readFile(path.join(homedir, ".musa.state.json"), { encoding: "utf-8" })
+    .readFile(path.join(homedir, stateFile), { encoding: "utf-8" })
     .catch((err) => {
       console.error("State file doesn't exist", err);
       return "{}";

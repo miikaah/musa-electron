@@ -4,6 +4,9 @@ const Datastore = require("nedb");
 const { getMetadata } = require("./metadata");
 const UrlSafeBase64 = require("./urlsafe-base64");
 
+const { NODE_ENV } = process.env;
+const isDev = NODE_ENV === "local";
+
 let audioDb;
 let albumDb;
 let themeDb;
@@ -11,18 +14,21 @@ let libPath;
 const initDb = (libraryPath) => {
   libPath = libraryPath;
 
+  const audioDbFile = `${isDev ? ".dev" : ""}.musa.audio.db`;
   audioDb = new Datastore({
-    filename: path.join(libraryPath, ".musa.audio.db"),
+    filename: path.join(libraryPath, audioDbFile),
   });
   audioDb.loadDatabase();
 
+  const albumDbFile = `${isDev ? ".dev" : ""}.musa.album.db`;
   albumDb = new Datastore({
-    filename: path.join(libraryPath, ".musa.album.db"),
+    filename: path.join(libraryPath, albumDbFile),
   });
   albumDb.loadDatabase();
 
+  const themeDbFile = `${isDev ? ".dev" : ""}.musa.theme.db`;
   themeDb = new Datastore({
-    filename: path.join(libraryPath, ".musa.theme.db"),
+    filename: path.join(libraryPath, themeDbFile),
   });
   themeDb.loadDatabase();
 };
