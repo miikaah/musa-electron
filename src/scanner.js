@@ -3,6 +3,9 @@ const { getAllAudios, insertAudio, upsertAudio, upsertAlbum } = require("./db");
 const { audioExts } = require("./fs");
 const UrlSafeBase64 = require("./urlsafe-base64");
 
+const { DISABLE_SCANNING } = process.env;
+const isScanningDisabled = DISABLE_SCANNING === "true";
+
 const scanColor = {
   RED: "#f00",
   YELLOW: "#ff0",
@@ -11,7 +14,10 @@ const scanColor = {
 
 const startScan = async ({ event, files, albumCollection }) => {
   if (!files) {
-    console.error("Did not get files JSON");
+    console.error("Did not get files JSON\n");
+    return;
+  } else if (isScanningDisabled) {
+    console.log("Scanning is disabled\n");
     return;
   }
 
