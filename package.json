@@ -7,7 +7,7 @@
   "scripts": {
     "setup": "npm i && electron-rebuild",
     "dev": "nodemon --watch ./src --exec npm start",
-    "start": "env-cmd electron .",
+    "start": "env-cmd -f .env.local electron .",
     "test": "jest --coverage",
     "test:w": "jest --coverage --watch",
     "package:mac": "electron-packager . --overwrite --platform=darwin --arch=x64 --icon=assets/icons/musa1024x1024.icns --prune=true --out=release-builds",

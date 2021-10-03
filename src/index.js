@@ -6,6 +6,9 @@ const { createMediaCollection } = require("./media-separator");
 const { createApi } = require("./api");
 const { initDb } = require("./db");
 
+const { NODE_ENV } = process.env;
+const isDev = NODE_ENV === "local";
+
 const logOpStart = (title) => {
   console.log(title);
   console.log("----------------------");
@@ -134,15 +137,17 @@ let mainWindow;
 function createWindow() {
   const { screen } = require("electron");
   const allDisplays = screen.getAllDisplays();
+
   let biggestDisplay = allDisplays[0];
-  if (process.env.IS_DEV && allDisplays.length > 1) {
+  if (isDev && allDisplays.length > 1) {
     allDisplays.forEach(
       (display) =>
         (biggestDisplay = display.size.width > biggestDisplay.size.width ? display : biggestDisplay)
     );
   }
+
   const getWebPreferencesByEnv = () => {
-    return process.env.IS_DEV
+    return isDev
       ? {
           nodeIntegration: true,
           nodeIntegrationInSubFrames: true,
@@ -171,14 +176,14 @@ function createWindow() {
   });
 
   const getURL = () => {
-    return process.env.IS_DEV
+    return isDev
       ? "http://localhost:3666"
       : `file://${path.join(app.getAppPath(), "/build/index.html")}`;
   };
   // and load the index.html of the app.
   mainWindow.loadURL(getURL());
 
-  if (process.env.IS_DEV) {
+  if (isDev) {
     mainWindow.webContents.openDevTools();
     protocol.registerFileProtocol("file", (request, callback) => {
       const pathname = decodeURI(request.url.replace("file://", ""));
