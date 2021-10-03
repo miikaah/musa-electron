@@ -1,38 +1,153 @@
-// Modules to control application life and create native browser window
-"use strict";
-
+const { app, BrowserWindow, Menu, protocol, ipcMain: ipc, dialog } = require("electron");
 const path = require("path");
-const {
-  app,
-  BrowserWindow,
-  ipcMain,
-  Menu,
-  dialog,
-  protocol,
-} = require("electron");
-const { init, initLibrary, runInitialScan } = require("./library");
-const { isUndefined } = require("lodash");
+const { traverseFileSystem } = require("./fs");
+const { getState, setState } = require("./fs.state");
+const { createMediaCollection } = require("./media-separator");
+const { createApi } = require("./api");
+const { initDb } = require("./db");
 
-let mainWindow;
+const { NODE_ENV } = process.env;
+const isDev = NODE_ENV === "local";
+
+const logOpStart = (title) => {
+  console.log(title);
+  console.log("----------------------");
+};
+
+const logOpReport = (start, collection, name) => {
+  console.log(`Took: ${(Date.now() - start) / 1000} seconds`);
+  console.log(`Found: ${collection.length} ${name}`);
+  console.log("----------------------\n");
+};
+
+let files;
+let artistCollection;
+let albumCollection;
+let audioCollection;
+let imageCollection;
+let artistObject;
+
+ipc.on("musa:settings:request:get", async (event) => {
+  const settings = await getState();
+
+  event.sender.send("musa:settings:response:get", settings);
+});
+
+ipc.on("musa:settings:request:insert", async (event, settings) => {
+  await setState(settings);
+
+  event.sender.send("musa:settings:response:insert");
+});
+
+ipc.on("musa:addMusicLibraryPath:request", async (event) => {
+  const paths = dialog.showOpenDialogSync({ properties: ["openDirectory"] });
+
+  if (!Array.isArray(paths) || paths.length < 1) {
+    return;
+  }
+
+  const newPath = paths[0];
+  console.log(`New music library path added: ${newPath}\n`);
+
+  event.sender.send("musa:addMusicLibraryPath:response", newPath);
+  await setState({ musicLibraryPath: newPath });
+  await init(event);
+});
+
+// This is very convoluted
+// * let musa:ready event control how scan gets launched via frontend
+//
+// *** Danger of launching multiple scans at the same time
+//
+// TODO: Perhaps a heuristic like 5 min interval of doing full update during startup?
+//
+const init = async (event) => {
+  const state = await getState();
+  const { musicLibraryPath } = state;
+  console.log("state", state, "\n");
+
+  if (!musicLibraryPath) {
+    const warning =
+      "No music library path specified. Go to settings and add it to start scanning.\n";
+    console.log(warning);
+
+    return;
+  }
+
+  const totalStart = Date.now();
+
+  logOpStart("Traversing file system");
+  let start = Date.now();
+  files = await traverseFileSystem(musicLibraryPath);
+  logOpReport(start, files, "files");
+
+  logOpStart("Creating media collection");
+  start = Date.now();
+  const { artistsCol, albumsCol, audioCol, imagesCol } = createMediaCollection(
+    files,
+    musicLibraryPath,
+    true
+  );
+  artistCollection = artistsCol;
+  albumCollection = albumsCol;
+  audioCollection = audioCol;
+  imageCollection = imagesCol;
+
+  artistObject = Object.entries(artistCollection)
+    .map(([id, { name, url }]) => ({ id, name, url }))
+    .reduce((acc, artist) => {
+      const { name } = artist;
+      const label = name.charAt(0);
+
+      return {
+        ...acc,
+        [label]: [...(acc[label] || []), artist],
+      };
+    }, {});
+
+  console.log(`Took: ${(Date.now() - start) / 1000} seconds`);
+  console.log(`Found: ${Object.keys(artistCollection).length} artists`);
+  console.log(`Found: ${Object.keys(albumCollection).length} albums`);
+  console.log(`Found: ${Object.keys(audioCollection).length} songs`);
+  console.log(`Found: ${Object.keys(imageCollection).length} images`);
+  console.log("----------------------\n");
+
+  logOpStart("Startup Report");
+  console.log(`Took: ${(Date.now() - totalStart) / 1000} seconds total`);
+  console.log("----------------------\n");
+
+  initDb(musicLibraryPath);
+
+  createApi({
+    artistObject,
+    artistCollection,
+    albumCollection,
+    audioCollection,
+    files,
+  });
+
+  event.sender.send("musa:ready");
+};
+ipc.once("musa:onInit", init);
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
+let mainWindow;
 
 function createWindow() {
   const { screen } = require("electron");
   const allDisplays = screen.getAllDisplays();
+
   let biggestDisplay = allDisplays[0];
-  if (process.env.IS_DEV && allDisplays.length > 1) {
+  if (isDev && allDisplays.length > 1) {
     allDisplays.forEach(
       (display) =>
-        (biggestDisplay =
-          display.size.width > biggestDisplay.size.width
-            ? display
-            : biggestDisplay)
+        (biggestDisplay = display.size.width > biggestDisplay.size.width ? display : biggestDisplay)
     );
   }
+
   const getWebPreferencesByEnv = () => {
-    return process.env.IS_DEV
+    return isDev
       ? {
           nodeIntegration: true,
           nodeIntegrationInSubFrames: true,
@@ -61,14 +176,14 @@ function createWindow() {
   });
 
   const getURL = () => {
-    return process.env.IS_DEV
+    return isDev
       ? "http://localhost:3666"
-      : `file://${path.join(__dirname, "../build/index.html")}`;
+      : `file://${path.join(app.getAppPath(), "/build/index.html")}`;
   };
   // and load the index.html of the app.
   mainWindow.loadURL(getURL());
 
-  if (process.env.IS_DEV) {
+  if (isDev) {
     mainWindow.webContents.openDevTools();
     protocol.registerFileProtocol("file", (request, callback) => {
       const pathname = decodeURI(request.url.replace("file://", ""));
@@ -103,8 +218,7 @@ function createWindow() {
         },
         {
           label: "Toggle Developer Tools",
-          accelerator:
-            process.platform === "darwin" ? "Alt+Command+I" : "Ctrl+Shift+I",
+          accelerator: process.platform === "darwin" ? "Alt+Command+I" : "Ctrl+Shift+I",
           click: function (item, focusedWindow) {
             if (focusedWindow) focusedWindow.toggleDevTools();
           },
@@ -122,7 +236,11 @@ function createWindow() {
       label: "Edit",
       submenu: [
         { label: "Undo", accelerator: "CmdOrCtrl+Z", selector: "undo:" },
-        { label: "Redo", accelerator: "Shift+CmdOrCtrl+Z", selector: "redo:" },
+        {
+          label: "Redo",
+          accelerator: "Shift+CmdOrCtrl+Z",
+          selector: "redo:",
+        },
         { type: "separator" },
         { label: "Cut", accelerator: "CmdOrCtrl+X", selector: "cut:" },
         { label: "Copy", accelerator: "CmdOrCtrl+C", selector: "copy:" },
@@ -137,8 +255,6 @@ function createWindow() {
   ];
 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
-
-  init(mainWindow);
 }
 
 // This method will be called when Electron has finished
@@ -161,24 +277,4 @@ app.on("activate", function () {
   if (mainWindow === null) {
     createWindow();
   }
-});
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
-
-ipcMain.on("initLibrary", initLibrary);
-ipcMain.on("runInitialScan", runInitialScan);
-
-ipcMain.on("addMusicLibraryPath", (event, songList, libPaths = []) => {
-  const paths = dialog.showOpenDialogSync({ properties: ["openDirectory"] });
-
-  if (isUndefined(paths)) return;
-
-  const newPath = paths[0];
-  event.sender.send("addMusicLibraryPath", newPath);
-  initLibrary(event, songList, [...libPaths, newPath]);
-});
-
-ipcMain.on("removeMusicLibraryPath", (event, songList, paths, deletedPath) => {
-  initLibrary(event, songList, paths, deletedPath);
 });

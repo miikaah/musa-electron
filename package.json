@@ -1,20 +1,20 @@
 {
   "name": "musa-electron",
   "productName": "Musa",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "",
   "main": "src/index.js",
   "scripts": {
     "setup": "npm i && electron-rebuild",
-    "start": "nodemon --watch ./src --exec dotenv electron .",
+    "dev": "nodemon --watch ./src --exec npm start",
+    "start": "env-cmd -f .env.local electron .",
     "test": "jest --coverage",
     "test:w": "jest --coverage --watch",
     "package:mac": "electron-packager . --overwrite --platform=darwin --arch=x64 --icon=assets/icons/musa1024x1024.icns --prune=true --out=release-builds",
-    "pack:mac": "dotenv bash pack.mac.sh",
+    "pack:mac": "env-cmd bash pack.mac.sh",
     "package:win": "electron-packager . --overwrite --platform=win32 --arch=x64 --icon=assets/icons/musa1024x1024.ico --prune=true --out=release-builds",
-    "pack:win": "dotenv pack.win.bat",
-    "precommit": "lint-staged",
-    "prepare": "husky install"
+    "pack:win": "env-cmd pack.win.bat",
+    "precommit": "lint-staged"
   },
   "lint-staged": {
     "*.{js,json,md}": [
@@ -26,25 +26,22 @@
     "type": "git",
     "url": "git://github.com/miikaah/musa-electron.git"
   },
-  "license": "ISC",
-  "devDependencies": {
-    "dotenv-cli": "^4.0.0",
-    "electron": "^11.4.11",
-    "electron-packager": "15.3.0",
-    "electron-rebuild": "3.1.1",
-    "eslint": "^7.32.0",
-    "husky": "^7.0.1",
-    "jest": "^27.0.6",
-    "lint-staged": "^11.1.2",
-    "nodemon": "^2.0.12",
-    "prettier": "^2.3.2"
-  },
+  "license": "MIT",
   "dependencies": {
-    "any-shell-escape": "^0.1.1",
-    "bottleneck": "^2.19.5",
-    "chokidar": "^3.5.2",
-    "ffprobe-static": "^3.0.0",
-    "lodash": "^4.17.21",
-    "object-hash": "^2.2.0"
+    "fuzzysort": "^1.1.4",
+    "music-metadata": "^7.11.4",
+    "nedb": "^1.8.0",
+    "urlsafe-base64": "^1.0.0"
+  },
+  "devDependencies": {
+    "electron": "^15.0.0",
+    "electron-packager": "15.4.0",
+    "electron-rebuild": "3.2.3",
+    "env-cmd": "^10.1.0",
+    "eslint": "^7.32.0",
+    "jest": "^27.2.2",
+    "lint-staged": "^11.1.2",
+    "nodemon": "2.0.7",
+    "prettier": "^2.4.1"
   }
 }

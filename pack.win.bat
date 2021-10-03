@@ -1,7 +1,7 @@
 @echo off
 echo "Building Musa frontend..."
 cd %FRONTEND_DIR%
-call npm run build
+call npm run build:electron
 
 echo "Packaging Musa into an Electron app for Windows..."
 cd %BACKEND_DIR%
