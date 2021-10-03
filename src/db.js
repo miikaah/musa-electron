@@ -74,7 +74,7 @@ const upsertAudio = async (file) => {
     const metadata = await getMetadata(libPath, { id, quiet });
 
     console.log("Updating audio", filename, "because it was modified at", modifiedAt);
-    dbAudio.update(
+    audioDb.update(
       { path_id: id },
       {
         $set: {
