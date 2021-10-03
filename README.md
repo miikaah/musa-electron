@@ -2,13 +2,6 @@
 
 Electron backend for Musa.
 
-## Getting started
-
-Run `npm run setup` to install packages and to rebuild fsevents.
-
-This is needed because this package uses Chokidar and without rebuilding fsevents,
-it reverts back to polling on Mac which causes huge performance issues by hogging a lot of CPU.
-
 ## Packaging the app
 
 Clone `https://github.com/miikaah/musa` to its own directory.
