@@ -29,7 +29,7 @@
   "license": "MIT",
   "dependencies": {
     "fuzzysort": "^1.1.4",
-    "musa-core": "git@github.com:miikaah/musa-core.git#a1e91eab2315175ddabd13eedbc195badcffc70f",
+    "musa-core": "git@github.com:miikaah/musa-core.git#a1fb15c063f0cec8d432447f7d954a0face2164e",
     "nedb": "^1.8.0"
   },
   "devDependencies": {
