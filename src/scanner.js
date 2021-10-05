@@ -1,7 +1,6 @@
 const { sep } = require("path");
+const { audioExts, UrlSafeBase64 } = require("musa-core");
 const { getAllAudios, insertAudio, upsertAudio, upsertAlbum } = require("./db");
-const { audioExts } = require("./fs");
-const UrlSafeBase64 = require("./urlsafe-base64");
 
 const { DISABLE_SCANNING } = process.env;
 const isScanningDisabled = DISABLE_SCANNING === "true";

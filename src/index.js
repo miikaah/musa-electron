@@ -1,8 +1,7 @@
 const { app, BrowserWindow, Menu, protocol, ipcMain: ipc, dialog } = require("electron");
 const path = require("path");
-const { traverseFileSystem } = require("./fs");
+const { traverseFileSystem, createMediaCollection } = require("musa-core");
 const { getState, setState } = require("./fs.state");
-const { createMediaCollection } = require("./media-separator");
 const { createApi } = require("./api");
 const { initDb } = require("./db");
 
@@ -83,11 +82,11 @@ const init = async (event) => {
 
   logOpStart("Creating media collection");
   start = Date.now();
-  const { artistsCol, albumsCol, audioCol, imagesCol } = createMediaCollection(
+  const { artistsCol, albumsCol, audioCol, imagesCol } = createMediaCollection({
     files,
-    musicLibraryPath,
-    true
-  );
+    baseUrl: musicLibraryPath,
+    isElectron: true,
+  });
   artistCollection = artistsCol;
   albumCollection = albumsCol;
   audioCollection = audioCol;

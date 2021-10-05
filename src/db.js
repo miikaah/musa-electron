@@ -1,8 +1,7 @@
 const path = require("path");
 const fs = require("fs/promises");
 const Datastore = require("nedb");
-const { getMetadata } = require("./metadata");
-const UrlSafeBase64 = require("./urlsafe-base64");
+const { getMetadata, UrlSafeBase64 } = require("musa-core");
 
 const { NODE_ENV } = process.env;
 const isDev = NODE_ENV === "local";
