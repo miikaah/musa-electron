@@ -10,7 +10,7 @@
     "start": "npm run build && env-cmd -f .env.local electron ./dist/index.js",
     "test": "jest --coverage",
     "test:w": "jest --coverage --watch",
-    "build": "tsc && cp ./{package.json,package-lock.json} dist/ && cd dist && npm ci --prod; cd ..",
+    "build": "tsc --project tsconfig.build.json && cp ./{package.json,package-lock.json} dist/ && cd dist && npm ci --prod; cd ..",
     "tsc:w": "tsc --watch --noEmit",
     "package:mac": "electron-packager ./dist --overwrite --platform=darwin --arch=x64 --icon=assets/icons/musa1024x1024.icns --prune=true --out=release-builds",
     "pack:mac": "env-cmd bash pack.mac.sh",
