@@ -1,7 +1,7 @@
 import { AlbumCollection, AlbumWithFiles, Metadata } from "musa-core";
 import { getAlbum, enrichAlbumFiles, EnrichedAlbumFile } from "../db";
 
-type AlbumWithFilesAndMetadata = Omit<AlbumWithFiles, "files"> & {
+export type AlbumWithFilesAndMetadata = Omit<AlbumWithFiles, "files"> & {
   metadata: Metadata;
   files: EnrichedAlbumFile[];
 };
@@ -9,11 +9,12 @@ type AlbumWithFilesAndMetadata = Omit<AlbumWithFiles, "files"> & {
 export const getAlbumById = async (
   albumCollection: AlbumCollection,
   id: string
-): Promise<AlbumWithFilesAndMetadata | never[]> => {
+): Promise<AlbumWithFilesAndMetadata> => {
   const album = albumCollection[id];
 
   if (!album) {
-    return [];
+    // @ts-expect-error return empty
+    return {};
   }
 
   const dbAlbum = await getAlbum(id);

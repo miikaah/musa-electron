@@ -9,7 +9,7 @@ type ArtistAlbum = {
   year?: number | null;
 };
 
-type Artist = Omit<ArtistWithAlbums, "albums"> & {
+export type Artist = Omit<ArtistWithAlbums, "albums"> & {
   albums: EnrichedAlbum[];
 };
 

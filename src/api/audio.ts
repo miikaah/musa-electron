@@ -1,7 +1,7 @@
 import { AlbumCollection, FileCollection, FileWithInfo, Metadata } from "musa-core";
 import { getAudio } from "../db";
 
-type AudioWithMetadata = FileWithInfo & {
+export type AudioWithMetadata = FileWithInfo & {
   track: string | null;
   coverUrl?: string;
   metadata: Metadata;
