@@ -1,18 +1,37 @@
-const fuzzysort = require("fuzzysort");
-const { getArtistAlbums } = require("./artist");
-const { getAlbumById } = require("./album");
-const { getAudioById } = require("./audio");
+import {
+  ArtistCollection,
+  AlbumCollection,
+  FileCollection,
+  ArtistWithAlbums,
+  AlbumWithFiles,
+} from "musa-core";
+import fuzzysort from "fuzzysort";
+import { getArtistAlbums } from "./artist";
+import { getAlbumById } from "./album";
+import { getAudioById } from "./audio";
 
 const options = { limit: 10, key: "name", threshold: -50 };
 
-const find = async ({
+type Params = {
+  artistsForFind: ArtistsForFind;
+  albumsForFind: AlbumsForFind;
+  artistCollection: ArtistCollection;
+  albumCollection: AlbumCollection;
+  audioCollection: FileCollection;
+  query: string;
+};
+
+type ArtistsForFind = (ArtistWithAlbums & { id: string })[];
+type AlbumsForFind = (AlbumWithFiles & { id: string })[];
+
+export const find = async ({
   artistsForFind,
   albumsForFind,
   artistCollection,
   albumCollection,
   audioCollection,
   query,
-}) => {
+}: Params): Promise<unknown> => {
   const foundArtists = fuzzysort.go(query, artistsForFind, options);
   const artists = await Promise.all(
     foundArtists
@@ -35,8 +54,4 @@ const find = async ({
     albums,
     audios,
   };
-};
-
-module.exports = {
-  find,
 };

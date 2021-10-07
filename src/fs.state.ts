@@ -1,16 +1,17 @@
-const fs = require("fs/promises");
-const path = require("path");
-const homedir = require("os").homedir();
+import fs from "fs/promises";
+import path from "path";
+import os from "os";
 
 const { NODE_ENV } = process.env;
 const isDev = NODE_ENV === "local";
 const stateFile = `${isDev ? ".dev" : ""}.musa.state.json`;
+const homedir = os.homedir();
 
-const setState = async (state) => {
+export const setState = async (state: unknown) => {
   return fs.writeFile(path.join(homedir, stateFile), JSON.stringify(state, null, 2));
 };
 
-const getState = async () => {
+export const getState = async () => {
   const file = await fs
     .readFile(path.join(homedir, stateFile), { encoding: "utf-8" })
     .catch((err) => {
@@ -27,9 +28,4 @@ const getState = async () => {
   }
 
   return state;
-};
-
-module.exports = {
-  setState,
-  getState,
 };

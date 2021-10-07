@@ -1,13 +1,32 @@
-const { getAudio, enrichAlbums } = require("../db");
+import { ArtistCollection, AlbumCollection, ArtistWithAlbums } from "musa-core";
+import { getAudio, enrichAlbums, EnrichedAlbum } from "../db";
 
-const getArtistById = async (artistCollection, albumCollection, id) => {
+type ArtistAlbum = {
+  id: string;
+  name: string;
+  url: string;
+  coverUrl?: string;
+  year?: number | null;
+};
+
+type Artist = Omit<ArtistWithAlbums, "albums"> & {
+  albums: EnrichedAlbum[];
+};
+
+const byYear = (a: ArtistAlbum, b: ArtistAlbum) => Number(a.year) - Number(b.year);
+
+export const getArtistById = async (
+  artistCollection: ArtistCollection,
+  id: string
+): Promise<Artist> => {
   const artist = artistCollection[id];
 
   if (!artist) {
+    // @ts-expect-error return empty
     return {};
   }
 
-  const albums = await Promise.all(
+  const albums: ArtistAlbum[] = await Promise.all(
     artist.albums.map(async ({ id, name, url, coverUrl, firstAlbumAudio }) => {
       let year = null;
       let albumName = null;
@@ -31,14 +50,19 @@ const getArtistById = async (artistCollection, albumCollection, id) => {
 
   return {
     ...artist,
-    albums: albums.sort((a, b) => a.year - b.year),
+    albums: albums.sort(byYear),
   };
 };
 
-const getArtistAlbums = async (artistCollection, albumCollection, id) => {
+export const getArtistAlbums = async (
+  artistCollection: ArtistCollection,
+  albumCollection: AlbumCollection,
+  id: string
+): Promise<Artist> => {
   const artist = artistCollection[id];
 
   if (!artist) {
+    // @ts-expect-error return empty
     return [];
   }
 
@@ -62,12 +86,7 @@ const getArtistAlbums = async (artistCollection, albumCollection, id) => {
 
   return {
     ...artist,
-    albums: albums.sort((a, b) => a.year - b.year),
+    albums: albums.sort(byYear),
     files,
   };
-};
-
-module.exports = {
-  getArtistById,
-  getArtistAlbums,
 };

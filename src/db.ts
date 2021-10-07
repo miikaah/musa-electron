@@ -1,20 +1,31 @@
-const path = require("path");
-const fs = require("fs/promises");
-const Datastore = require("nedb");
-const { getMetadata, UrlSafeBase64 } = require("musa-core");
+import path from "path";
+import fs from "fs/promises";
+import Datastore from "nedb";
+import {
+  getMetadata,
+  UrlSafeBase64,
+  Metadata,
+  AlbumCollection,
+  AlbumWithFiles,
+  ArtistWithAlbums,
+} from "musa-core";
 
 const { NODE_ENV } = process.env;
 const isDev = NODE_ENV === "local";
 
-let audioDb;
-let albumDb;
-let themeDb;
-let libPath;
-const initDb = (libraryPath) => {
+type Audio = { path_id: string; modified_at: string; metadata: Metadata };
+type Album = { path_id: string; modified_at: string; metadata: Metadata };
+type Theme = { colors: unknown; path_id: string };
+
+let audioDb: Datastore<Audio>;
+let albumDb: Datastore<Album>;
+let themeDb: Datastore<Theme>;
+let libPath: string;
+export const initDb = (libraryPath: string): void => {
   libPath = libraryPath;
 
   const audioDbFile = `${isDev ? ".dev" : ""}.musa.audio.db`;
-  audioDb = new Datastore({
+  audioDb = new Datastore<Audio>({
     filename: path.join(libraryPath, audioDbFile),
   });
   audioDb.loadDatabase();
@@ -32,7 +43,7 @@ const initDb = (libraryPath) => {
   themeDb.loadDatabase();
 };
 
-const insertAudio = async (file) => {
+export const insertAudio = async (file: { id: string; filename: string }): Promise<void> => {
   if (!file) {
     return;
   }
@@ -47,7 +58,11 @@ const insertAudio = async (file) => {
   });
 };
 
-const upsertAudio = async (file) => {
+export const upsertAudio = async (file: {
+  id: string;
+  filename: string;
+  quiet: boolean;
+}): Promise<void> => {
   const { id, filename, quiet = false } = file;
 
   if (!id || !filename) {
@@ -86,7 +101,15 @@ const upsertAudio = async (file) => {
   }
 };
 
-const upsertAlbum = async (file) => {
+type AlbumUpsertOptions = {
+  id: string;
+  album: {
+    name: string;
+    files: { id: string }[];
+  };
+};
+
+export const upsertAlbum = async (file: AlbumUpsertOptions): Promise<void> => {
   if (!file) {
     return;
   }
@@ -128,7 +151,7 @@ const upsertAlbum = async (file) => {
   }
 };
 
-const buildAlbumMetadata = (metadata) => {
+const buildAlbumMetadata = (metadata: Metadata) => {
   const { year, album, artists, artist, albumArtist, genre, dynamicRangeAlbum } = metadata;
   return {
     year,
@@ -141,7 +164,7 @@ const buildAlbumMetadata = (metadata) => {
   };
 };
 
-const getAudio = async (id) => {
+export const getAudio = async (id: string): Promise<Audio> => {
   return new Promise((resolve, reject) => {
     audioDb.findOne({ path_id: id }, (err, audio) => {
       if (err) {
@@ -153,9 +176,9 @@ const getAudio = async (id) => {
   });
 };
 
-const getAllAudios = async () => {
+export const getAllAudios = async (): Promise<Audio[]> => {
   return new Promise((resolve, reject) => {
-    audioDb.find({}, (err, audios) => {
+    audioDb.find({}, (err: unknown, audios: Audio[]) => {
       if (err) {
         reject(err);
       } else {
@@ -165,9 +188,9 @@ const getAllAudios = async () => {
   });
 };
 
-const getAudiosByIds = async (ids) => {
+export const getAudiosByIds = async (ids: string[]): Promise<Audio[]> => {
   return new Promise((resolve, reject) => {
-    audioDb.find({ path_id: { $in: ids } }, (err, audios) => {
+    audioDb.find({ path_id: { $in: ids } }, (err: unknown, audios: Audio[]) => {
       if (err) {
         reject(err);
       } else {
@@ -177,7 +200,7 @@ const getAudiosByIds = async (ids) => {
   });
 };
 
-const getAlbum = async (id) => {
+export const getAlbum = async (id: string): Promise<Album> => {
   return new Promise((resolve, reject) => {
     albumDb.findOne({ path_id: id }, (err, album) => {
       if (err) {
@@ -189,7 +212,18 @@ const getAlbum = async (id) => {
   });
 };
 
-const enrichAlbums = async (albumCollection, artist) => {
+export type EnrichedAlbum = {
+  id: string;
+  name: string;
+  url: string;
+  coverUrl?: string;
+  year?: number | null;
+};
+
+export const enrichAlbums = async (
+  albumCollection: AlbumCollection,
+  artist: ArtistWithAlbums
+): Promise<EnrichedAlbum[]> => {
   return Promise.all(
     artist.albums.map(async ({ id, name, url, coverUrl, firstAlbumAudio }) => {
       let year = null;
@@ -216,10 +250,18 @@ const enrichAlbums = async (albumCollection, artist) => {
   );
 };
 
-const enrichAlbumFiles = async (album) => {
+export type EnrichedAlbumFile = {
+  id?: string;
+  name: string;
+  track: string;
+  fileUrl?: string;
+  metadata?: Metadata;
+};
+
+export const enrichAlbumFiles = async (album: AlbumWithFiles): Promise<EnrichedAlbumFile[]> => {
   const audioIds = album.files.map(({ id }) => id);
   const files = await getAudiosByIds(audioIds);
-  const trackNumbers = files.map((file) => file?.metadata?.track?.no);
+  const trackNumbers = files.map((file) => Number(file?.metadata?.track?.no));
   const maxTrackNo = Math.max(...trackNumbers);
   const pad = `${maxTrackNo}`.length;
   const padLen = pad < 2 ? 2 : pad;
@@ -233,7 +275,7 @@ const enrichAlbumFiles = async (album) => {
       const track = `${diskNo ? `${diskNo}.` : ""}${trackNo.padStart(padLen, "0")}`;
 
       return {
-        id: file.path_id,
+        id: file?.path_id,
         name,
         track,
         fileUrl,
@@ -247,9 +289,9 @@ const enrichAlbumFiles = async (album) => {
   return mergedFiles;
 };
 
-const getAllThemes = async () => {
+export const getAllThemes = async (): Promise<Theme[]> => {
   return new Promise((resolve, reject) => {
-    themeDb.find({}, (err, themes) => {
+    themeDb.find({}, (err: unknown, themes: Theme[]) => {
       if (err) {
         reject(err);
       } else {
@@ -259,7 +301,7 @@ const getAllThemes = async () => {
   });
 };
 
-const getTheme = async (id) => {
+export const getTheme = async (id: string): Promise<Theme> => {
   return new Promise((resolve, reject) => {
     themeDb.findOne({ path_id: id }, (err, theme) => {
       if (err) {
@@ -271,7 +313,7 @@ const getTheme = async (id) => {
   });
 };
 
-const insertTheme = async (id, colors) => {
+export const insertTheme = async (id: string, colors: unknown): Promise<Theme> => {
   return new Promise((resolve, reject) => {
     themeDb.insert(
       {
@@ -289,20 +331,4 @@ const insertTheme = async (id, colors) => {
       }
     );
   });
-};
-
-module.exports = {
-  insertAudio,
-  getAllAudios,
-  upsertAudio,
-  getAlbum,
-  upsertAlbum,
-  getAudio,
-  getAudiosByIds,
-  enrichAlbums,
-  enrichAlbumFiles,
-  getAllThemes,
-  insertTheme,
-  getTheme,
-  initDb,
 };

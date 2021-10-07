@@ -1,6 +1,6 @@
-const { sep } = require("path");
-const { audioExts, UrlSafeBase64 } = require("musa-core");
-const { getAllAudios, insertAudio, upsertAudio, upsertAlbum } = require("./db");
+import { sep } from "path";
+import { audioExts, UrlSafeBase64, AlbumCollection } from "musa-core";
+import { getAllAudios, insertAudio, upsertAudio, upsertAlbum } from "./db";
 
 const { DISABLE_SCANNING } = process.env;
 const isScanningDisabled = DISABLE_SCANNING === "true";
@@ -11,7 +11,9 @@ const scanColor = {
   GREEN: "#0f0",
 };
 
-const startScan = async ({ event, files, albumCollection }) => {
+type Params = { event: Electron.IpcMainEvent; files: string[]; albumCollection: AlbumCollection };
+
+export const startScan = async ({ event, files, albumCollection }: Params): Promise<void> => {
   if (!files) {
     console.error("Did not get files JSON\n");
     return;
@@ -159,8 +161,4 @@ const startScan = async ({ event, files, albumCollection }) => {
   console.log("----------------------\n");
   event.sender.send("musa:scan:end");
   event.sender.send("musa:scan:complete", Date.now());
-};
-
-module.exports = {
-  startScan,
 };

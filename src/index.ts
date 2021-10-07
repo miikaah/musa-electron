@@ -1,30 +1,40 @@
-const { app, BrowserWindow, Menu, protocol, ipcMain: ipc, dialog } = require("electron");
-const path = require("path");
-const { traverseFileSystem, createMediaCollection } = require("musa-core");
-const { getState, setState } = require("./fs.state");
-const { createApi } = require("./api");
-const { initDb } = require("./db");
+import { app, BrowserWindow, Menu, protocol, ipcMain as ipc, dialog, screen } from "electron";
+import path from "path";
+import {
+  traverseFileSystem,
+  createMediaCollection,
+  ArtistCollection,
+  AlbumCollection,
+  FileCollection,
+} from "musa-core";
+import { getState, setState } from "./fs.state";
+import { createApi } from "./api";
+import { initDb } from "./db";
 
 const { NODE_ENV } = process.env;
 const isDev = NODE_ENV === "local";
 
-const logOpStart = (title) => {
+const logOpStart = (title: string) => {
   console.log(title);
   console.log("----------------------");
 };
 
-const logOpReport = (start, collection, name) => {
+const logOpReport = (start: number, collection: unknown[], name: string) => {
   console.log(`Took: ${(Date.now() - start) / 1000} seconds`);
   console.log(`Found: ${collection.length} ${name}`);
   console.log("----------------------\n");
 };
 
 let files;
-let artistCollection;
-let albumCollection;
-let audioCollection;
-let imageCollection;
-let artistObject;
+let artistCollection: ArtistCollection;
+let albumCollection: AlbumCollection;
+let audioCollection: FileCollection;
+let imageCollection: FileCollection;
+
+type ArtistObject = {
+  [label: string]: { id: string; name: string; url: string }[];
+};
+let artistObject: ArtistObject;
 
 ipc.on("musa:settings:request:get", async (event) => {
   const settings = await getState();
@@ -60,7 +70,7 @@ ipc.on("musa:addMusicLibraryPath:request", async (event) => {
 //
 // TODO: Perhaps a heuristic like 5 min interval of doing full update during startup?
 //
-const init = async (event) => {
+const init = async (event: Electron.IpcMainEvent) => {
   const state = await getState();
   const { musicLibraryPath } = state;
   console.log("state", state, "\n");
@@ -94,7 +104,7 @@ const init = async (event) => {
 
   artistObject = Object.entries(artistCollection)
     .map(([id, { name, url }]) => ({ id, name, url }))
-    .reduce((acc, artist) => {
+    .reduce((acc: ArtistObject, artist) => {
       const { name } = artist;
       const label = name.charAt(0);
 
@@ -131,10 +141,9 @@ ipc.once("musa:onInit", init);
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
-let mainWindow;
+let mainWindow: BrowserWindow | null;
 
 function createWindow() {
-  const { screen } = require("electron");
   const allDisplays = screen.getAllDisplays();
 
   let biggestDisplay = allDisplays[0];
@@ -169,7 +178,6 @@ function createWindow() {
     width: 1600,
     height: 1000,
     webPreferences: {
-      backgroundColor: "#21252b",
       ...getWebPreferencesByEnv(),
     },
   });
@@ -199,9 +207,10 @@ function createWindow() {
   });
 
   // Create the Application's main menu
-  var template = [
+  const template: Electron.MenuItem[] = [
     {
       label: "App",
+      // @ts-expect-error shut up
       submenu: [
         {
           label: "About Application",
@@ -212,14 +221,17 @@ function createWindow() {
           label: "Refresh",
           accelerator: "CmdOrCtrl+R",
           click() {
+            // @ts-expect-error can not be null
             mainWindow.reload();
           },
         },
         {
           label: "Toggle Developer Tools",
           accelerator: process.platform === "darwin" ? "Alt+Command+I" : "Ctrl+Shift+I",
-          click: function (item, focusedWindow) {
-            if (focusedWindow) focusedWindow.toggleDevTools();
+          click: function (_item: unknown, focusedWindow: Electron.WebContents) {
+            if (focusedWindow) {
+              focusedWindow.toggleDevTools();
+            }
           },
         },
         {
@@ -233,6 +245,7 @@ function createWindow() {
     },
     {
       label: "Edit",
+      // @ts-expect-error shut up
       submenu: [
         { label: "Undo", accelerator: "CmdOrCtrl+Z", selector: "undo:" },
         {
@@ -261,19 +274,19 @@ function createWindow() {
 // Some APIs can only be used after this event occurs.
 app.on("ready", createWindow);
 
+app.on("activate", function () {
+  // On macOS it's common to re-create a window in the app when the
+  // dock icon is clicked and there are no other windows open.
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
+});
+
 // Quit when all windows are closed.
 app.on("window-all-closed", function () {
   // On macOS it is common for applications and their menu bar
   // to stay active until the user quits explicitly with Cmd + Q
   if (process.platform !== "darwin") {
     app.quit();
-  }
-});
-
-app.on("activate", function () {
-  // On macOS it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
-  if (mainWindow === null) {
-    createWindow();
   }
 });

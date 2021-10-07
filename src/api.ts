@@ -1,12 +1,31 @@
-const { ipcMain: ipc } = require("electron");
-const { getArtistById, getArtistAlbums } = require("./api/artist");
-const { getAlbumById } = require("./api/album");
-const { getAudioById } = require("./api/audio");
-const { find } = require("./api/find");
-const { getAllThemes, getTheme, insertTheme } = require("./db");
-const { startScan } = require("./scanner");
+import { ipcMain as ipc } from "electron";
+import { ArtistCollection, AlbumCollection, FileCollection } from "musa-core";
+import { getArtistById, getArtistAlbums } from "./api/artist";
+import { getAlbumById } from "./api/album";
+import { getAudioById } from "./api/audio";
+import { find } from "./api/find";
+import { getAllThemes, getTheme, insertTheme } from "./db";
+import { startScan } from "./scanner";
 
-const createApi = ({ artistObject, artistCollection, albumCollection, audioCollection, files }) => {
+type ArtistObject = {
+  [label: string]: { id: string; name: string; url: string }[];
+};
+
+type Params = {
+  artistObject: ArtistObject;
+  artistCollection: ArtistCollection;
+  albumCollection: AlbumCollection;
+  audioCollection: FileCollection;
+  files: string[];
+};
+
+export const createApi = ({
+  artistObject,
+  artistCollection,
+  albumCollection,
+  audioCollection,
+  files,
+}: Params): void => {
   const artistsForFind = Object.entries(artistCollection).map(([id, a]) => ({ ...a, id }));
   const albumsForFind = Object.entries(albumCollection).map(([id, a]) => ({ ...a, id }));
 
@@ -15,7 +34,7 @@ const createApi = ({ artistObject, artistCollection, albumCollection, audioColle
   });
 
   ipc.on("musa:artist:request", async (event, id) => {
-    const artist = await getArtistById(artistCollection, albumCollection, id);
+    const artist = await getArtistById(artistCollection, id);
 
     event.sender.send("musa:artist:response", artist);
   });
@@ -91,8 +110,4 @@ const createApi = ({ artistObject, artistCollection, albumCollection, audioColle
   ipc.on("musa:scan", async (event) => {
     await startScan({ event, files, albumCollection });
   });
-};
-
-module.exports = {
-  createApi,
 };

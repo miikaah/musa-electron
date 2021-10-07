@@ -1,10 +1,13 @@
 @echo off
+echo "Building Musa backend..."
+rmdir /q /s dist
+call npm run build
+
 echo "Building Musa frontend..."
 cd %FRONTEND_DIR%
 call npm run build:electron
 
 echo "Packaging Musa into an Electron app for Windows..."
 cd %BACKEND_DIR%
-rmdir /q /s build
-xcopy "%FRONTEND_DIR%\build" build\ /s /e
+xcopy "%FRONTEND_DIR%\build" dist\build\ /s /e
 call npm run package:win
