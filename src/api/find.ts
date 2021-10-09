@@ -10,7 +10,7 @@ import { getArtistAlbums, Artist } from "./artist";
 import { getAlbumById, AlbumWithFilesAndMetadata } from "./album";
 import { getAudioById, AudioWithMetadata } from "./audio";
 
-const options = { limit: 10, key: "name", threshold: -50 };
+const options = { limit: 4, key: "name", threshold: -50 };
 
 type Params = {
   artistsForFind: ArtistsForFind;
