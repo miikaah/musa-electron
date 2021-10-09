@@ -7,7 +7,6 @@
     "isolatedModules": true,
     "moduleResolution": "node",
     "strict": true,
-    "sourceMap": true,
     "outDir": "dist",
     "baseUrl": "."
   },

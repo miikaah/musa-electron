@@ -10,7 +10,7 @@
     "start": "npm run build && env-cmd -f .env.local electron ./dist/index.js",
     "test": "jest --coverage",
     "test:w": "jest --coverage --watch",
-    "build": "tsc --project tsconfig.build.json && cp ./{package.json,package-lock.json} dist/ && cd dist && npm ci --prod; cd ..",
+    "build": "tsc --project tsconfig.build.json && shx cp ./{package.json,package-lock.json} dist/ && cd dist && npm ci --prod; cd ..",
     "tsc:w": "tsc --watch --noEmit",
     "package:mac": "electron-packager ./dist --overwrite --platform=darwin --arch=x64 --icon=assets/icons/musa1024x1024.icns --prune=true --out=release-builds",
     "pack:mac": "env-cmd bash pack.mac.sh",
@@ -51,6 +51,7 @@
     "lint-staged": "^11.1.2",
     "nodemon": "2.0.7",
     "prettier": "^2.4.1",
+    "shx": "^0.3.3",
     "typescript": "^4.4.3"
   }
 }
