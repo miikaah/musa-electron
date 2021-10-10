@@ -177,6 +177,7 @@ function createWindow() {
     y: biggestDisplay.bounds.y,
     width: 1600,
     height: 1000,
+    frame: false,
     webPreferences: {
       ...getWebPreferencesByEnv(),
     },
@@ -205,68 +206,6 @@ function createWindow() {
     // when you should delete the corresponding element.
     mainWindow = null;
   });
-
-  // Create the Application's main menu
-  const template: Electron.MenuItem[] = [
-    {
-      label: "App",
-      // @ts-expect-error shut up
-      submenu: [
-        {
-          label: "About Application",
-          selector: "orderFrontStandardAboutPanel:",
-        },
-        { type: "separator" },
-        {
-          label: "Refresh",
-          accelerator: "CmdOrCtrl+R",
-          click() {
-            // @ts-expect-error can not be null
-            mainWindow.reload();
-          },
-        },
-        {
-          label: "Toggle Developer Tools",
-          accelerator: process.platform === "darwin" ? "Alt+Command+I" : "Ctrl+Shift+I",
-          click: function (_item: unknown, focusedWindow: Electron.WebContents) {
-            if (focusedWindow) {
-              focusedWindow.toggleDevTools();
-            }
-          },
-        },
-        {
-          label: "Quit",
-          accelerator: "Command+Q",
-          click: function () {
-            app.quit();
-          },
-        },
-      ],
-    },
-    {
-      label: "Edit",
-      // @ts-expect-error shut up
-      submenu: [
-        { label: "Undo", accelerator: "CmdOrCtrl+Z", selector: "undo:" },
-        {
-          label: "Redo",
-          accelerator: "Shift+CmdOrCtrl+Z",
-          selector: "redo:",
-        },
-        { type: "separator" },
-        { label: "Cut", accelerator: "CmdOrCtrl+X", selector: "cut:" },
-        { label: "Copy", accelerator: "CmdOrCtrl+C", selector: "copy:" },
-        { label: "Paste", accelerator: "CmdOrCtrl+V", selector: "paste:" },
-        {
-          label: "Select All",
-          accelerator: "CmdOrCtrl+A",
-          selector: "selectAll:",
-        },
-      ],
-    },
-  ];
-
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
 // This method will be called when Electron has finished
@@ -289,4 +228,27 @@ app.on("window-all-closed", function () {
   if (process.platform !== "darwin") {
     app.quit();
   }
+});
+
+ipc.on("musa:window:minimize", async () => {
+  (mainWindow as BrowserWindow).minimize();
+});
+
+ipc.on("musa:window:maximize", async () => {
+  (mainWindow as BrowserWindow).maximize();
+});
+
+ipc.on("musa:window:unmaximize", async () => {
+  (mainWindow as BrowserWindow).unmaximize();
+});
+
+ipc.on("musa:window:isMaximized:request", async (event) => {
+  event.sender.send(
+    "musa:window:isMaximized:response",
+    (mainWindow as BrowserWindow).isMaximized()
+  );
+});
+
+ipc.on("musa:window:close", async () => {
+  (mainWindow as BrowserWindow).close();
 });
