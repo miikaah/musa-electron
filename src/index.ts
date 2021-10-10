@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, protocol, ipcMain as ipc, dialog, screen } from "electron";
+import { app, BrowserWindow, protocol, ipcMain as ipc, dialog, screen } from "electron";
 import path from "path";
 import {
   traverseFileSystem,
@@ -251,4 +251,8 @@ ipc.on("musa:window:isMaximized:request", async (event) => {
 
 ipc.on("musa:window:close", async () => {
   (mainWindow as BrowserWindow).close();
+});
+
+ipc.on("musa:window:platform:request", async (event) => {
+  event.sender.send("musa:window:platform:response", process.platform);
 });
