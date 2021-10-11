@@ -91,7 +91,9 @@ export const createApi = ({
   ipc.on("musa:themes:request:insert", async (event, id, colors) => {
     const newTheme = await insertTheme(id, colors);
 
-    event.sender.send("musa:themes:response:insert", newTheme);
+    const { path_id } = newTheme;
+
+    event.sender.send("musa:themes:response:insert", { id: path_id, colors });
   });
 
   ipc.on("musa:themes:request:remove", async (event, id) => {
