@@ -332,3 +332,20 @@ export const insertTheme = async (id: string, colors: unknown): Promise<Theme> =
     );
   });
 };
+
+export const removeTheme = async (id: string): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    themeDb.remove(
+      {
+        _id: id,
+      },
+      (err) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      }
+    );
+  });
+};

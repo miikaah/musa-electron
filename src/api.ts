@@ -4,7 +4,7 @@ import { getArtistById, getArtistAlbums } from "./api/artist";
 import { getAlbumById } from "./api/album";
 import { getAudioById } from "./api/audio";
 import { find } from "./api/find";
-import { getAllThemes, getTheme, insertTheme } from "./db";
+import { getAllThemes, getTheme, insertTheme, removeTheme } from "./db";
 import { startScan } from "./scanner";
 
 type ArtistObject = {
@@ -92,6 +92,12 @@ export const createApi = ({
     const newTheme = await insertTheme(id, colors);
 
     event.sender.send("musa:themes:response:insert", newTheme);
+  });
+
+  ipc.on("musa:themes:request:remove", async (event, id) => {
+    await removeTheme(id);
+
+    event.sender.send("musa:themes:response:remove");
   });
 
   ipc.on("musa:find:request", async (event, query) => {
