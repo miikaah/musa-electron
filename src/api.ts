@@ -58,7 +58,7 @@ export const createApi = ({
   });
 
   ipc.on("musa:audio:request", async (event, id) => {
-    const audio = await getAudioById(audioCollection, albumCollection, id);
+    const audio = await getAudioById({ audioCollection, albumCollection, id });
 
     event.sender.send("musa:audio:response", audio);
   });

@@ -1,5 +1,5 @@
 import { AlbumCollection, FileCollection, FileWithInfo, Metadata } from "musa-core";
-import { getAudio } from "../db";
+import { getAudio, Audio } from "../db";
 
 export type AudioWithMetadata = FileWithInfo & {
   track: string | null;
@@ -7,11 +7,19 @@ export type AudioWithMetadata = FileWithInfo & {
   metadata: Metadata;
 };
 
-export const getAudioById = async (
-  audioCollection: FileCollection,
-  albumCollection: AlbumCollection,
-  id: string
-): Promise<AudioWithMetadata> => {
+type Params = {
+  audioCollection: FileCollection;
+  albumCollection: AlbumCollection;
+  id: string;
+  existingDbAudio?: Audio;
+};
+
+export const getAudioById = async ({
+  audioCollection,
+  albumCollection,
+  id,
+  existingDbAudio,
+}: Params): Promise<AudioWithMetadata> => {
   const audio = audioCollection[id];
 
   if (!audio) {
@@ -20,7 +28,7 @@ export const getAudioById = async (
   }
 
   const album = albumCollection[audio.albumId as string];
-  const dbAudio = await getAudio(id);
+  const dbAudio = existingDbAudio || (await getAudio(id));
   const name = dbAudio?.metadata?.title || audio.name;
   const trackNo = `${dbAudio?.metadata?.track?.no || ""}`;
   const diskNo = `${dbAudio?.metadata?.disk?.no || ""}`;

@@ -13,9 +13,9 @@ import {
 const { NODE_ENV } = process.env;
 const isDev = NODE_ENV === "local";
 
-type Audio = { path_id: string; modified_at: string; metadata: Metadata };
-type Album = { path_id: string; modified_at: string; metadata: Metadata };
-type Theme = { colors: unknown; path_id: string };
+export type Audio = { path_id: string; modified_at: string; filename: string; metadata: Metadata };
+export type Album = { path_id: string; modified_at: string; metadata: Metadata };
+export type Theme = { colors: unknown; path_id: string };
 
 let audioDb: Datastore<Audio>;
 let albumDb: Datastore<Album>;
@@ -198,6 +198,83 @@ export const getAudiosByIds = async (ids: string[]): Promise<Audio[]> => {
       }
     });
   });
+};
+
+export const findAudios = async (limit: number, comparatorFn: Function): Promise<Audio[]> => {
+  return new Promise((resolve, reject) => {
+    audioDb
+      .find({
+        $where: function () {
+          return comparatorFn(this);
+        },
+      })
+      .limit(limit)
+      .exec((err: unknown, audios: Audio[]) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(audios);
+        }
+      });
+  });
+};
+
+export const findAudiosByMetadataAndFilename = async (
+  query: string,
+  limit: number
+): Promise<Audio[]> => {
+  const audiosByExactTitle = await findAudios(limit, (self: Audio) => {
+    const title = (self?.metadata?.title || "").toLowerCase();
+    const queryLc = query.toLowerCase();
+
+    return title === queryLc;
+  });
+
+  let audiosByFuzzyTitle: Audio[] = [];
+  let amountOfAudios = audiosByExactTitle.length;
+
+  if (amountOfAudios < limit) {
+    audiosByFuzzyTitle = await findAudios(limit - amountOfAudios, (self: Audio) => {
+      const title = (self?.metadata?.title || "").toLowerCase();
+      const queryLc = query.toLowerCase();
+
+      return title.includes(queryLc);
+    });
+  }
+
+  let audiosByExactFilename: Audio[] = [];
+  amountOfAudios += audiosByFuzzyTitle.length;
+
+  if (amountOfAudios < limit) {
+    audiosByExactFilename = await findAudios(limit - amountOfAudios, (self: Audio) => {
+      const filename = (self?.filename || "").toLowerCase();
+      const queryLc = query.toLowerCase();
+
+      return filename === queryLc;
+    });
+  }
+
+  let audiosByFuzzyFilename: Audio[] = [];
+  amountOfAudios += audiosByExactFilename.length;
+
+  if (amountOfAudios < limit) {
+    audiosByFuzzyFilename = await findAudios(limit - amountOfAudios, (self: Audio) => {
+      const filename = (self?.filename || "").toLowerCase();
+      const queryLc = query.toLowerCase();
+
+      return filename.includes(queryLc);
+    });
+  }
+
+  const foundAudios = new Map();
+  [
+    ...audiosByExactTitle,
+    ...audiosByFuzzyTitle,
+    ...audiosByExactFilename,
+    ...audiosByFuzzyFilename,
+  ].forEach((a) => foundAudios.set(a.path_id, a));
+
+  return Array.from(foundAudios.values());
 };
 
 export const getAlbum = async (id: string): Promise<Album> => {

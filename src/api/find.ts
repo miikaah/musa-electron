@@ -9,6 +9,7 @@ import fuzzysort from "fuzzysort";
 import { getArtistAlbums, Artist } from "./artist";
 import { getAlbumById, AlbumWithFilesAndMetadata } from "./album";
 import { getAudioById, AudioWithMetadata } from "./audio";
+import { findAudiosByMetadataAndFilename } from "../db";
 
 const options = { limit: 4, key: "name", threshold: -50 };
 
@@ -38,6 +39,13 @@ export const find = async ({
   audioCollection,
   query,
 }: Params): Promise<Result> => {
+  if (query.length < 1) {
+    return {
+      artists: [],
+      albums: [],
+      audios: [],
+    };
+  }
   const foundArtists = fuzzysort.go(query, artistsForFind, options);
   const artists = await Promise.all(
     foundArtists
@@ -48,12 +56,14 @@ export const find = async ({
   const albums = await Promise.all(
     foundAlbums.map((a) => a.obj).map(async (a) => getAlbumById(albumCollection, a.id))
   );
-  const foundAudios = fuzzysort.go(query, Object.values(audioCollection), options);
-  const audios = await Promise.all(
-    foundAudios
-      .map((a) => a.obj)
-      .map(async (a) => getAudioById(audioCollection, albumCollection, a.id))
-  );
+  const foundAudios = await findAudiosByMetadataAndFilename(query, 6);
+  const audios = (
+    await Promise.all(
+      foundAudios.map(async (a) =>
+        getAudioById({ audioCollection, albumCollection, id: a.path_id, existingDbAudio: a })
+      )
+    )
+  ).filter(({ id }) => !!audioCollection[id]);
 
   return {
     artists,
