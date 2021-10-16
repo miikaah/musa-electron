@@ -3,7 +3,7 @@ import { ArtistCollection, AlbumCollection, FileCollection } from "musa-core";
 import { getArtistById, getArtistAlbums } from "./api/artist";
 import { getAlbumById } from "./api/album";
 import { getAudioById } from "./api/audio";
-import { find } from "./api/find";
+import { find, findRandom } from "./api/find";
 import { getAllThemes, getTheme, insertTheme, removeTheme } from "./db";
 import { startScan } from "./scanner";
 
@@ -28,6 +28,7 @@ export const createApi = ({
 }: Params): void => {
   const artistsForFind = Object.entries(artistCollection).map(([id, a]) => ({ ...a, id }));
   const albumsForFind = Object.entries(albumCollection).map(([id, a]) => ({ ...a, id }));
+  const audiosForFind = Object.entries(audioCollection).map(([id, a]) => ({ ...a, id }));
 
   ipc.on("musa:artists:request", (event) => {
     event.sender.send("musa:artists:response", artistObject);
@@ -113,6 +114,19 @@ export const createApi = ({
     });
 
     event.sender.send("musa:find:response", result);
+  });
+
+  ipc.on("musa:find:request:random", async (event) => {
+    const result = await findRandom({
+      artistsForFind,
+      albumsForFind,
+      artistCollection,
+      albumCollection,
+      audioCollection,
+      audiosForFind,
+    });
+
+    event.sender.send("musa:find:response:random", result);
   });
 
   ipc.on("musa:scan", async (event) => {
