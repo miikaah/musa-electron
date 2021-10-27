@@ -49,21 +49,11 @@ const init = async (event: Electron.IpcMainEvent) => {
   }
 
   Db.init(musicLibraryPath);
-
-  const { artistObject, artistCollection, albumCollection, audioCollection, files } =
-    await Scanner.init({ musicLibraryPath });
-
-  createApi({
-    artistObject,
-    artistCollection,
-    albumCollection,
-    audioCollection,
-    files,
-  });
-
+  await Scanner.init({ musicLibraryPath });
+  createApi();
   event.sender.send("musa:ready");
 
-  Scanner.update({ event, scanColor, files, albumCollection });
+  Scanner.update({ event, scanColor });
 };
 ipc.once("musa:onInit", init);
 

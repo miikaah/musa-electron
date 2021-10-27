@@ -1,12 +1,5 @@
 import { ipcMain as ipc } from "electron";
-import {
-  Api,
-  Scanner,
-  ArtistCollection,
-  AlbumCollection,
-  FileCollection,
-  ArtistObject,
-} from "musa-core";
+import { Api, Scanner } from "musa-core";
 import { getState } from "./fs.state";
 
 export const scanColor = {
@@ -15,53 +8,39 @@ export const scanColor = {
   ALBUM_UPDATE: "#0f0",
 };
 
-export const createApi = ({
-  artistObject,
-  artistCollection,
-  albumCollection,
-  audioCollection,
-  files,
-}: {
-  artistObject: ArtistObject;
-  artistCollection: ArtistCollection;
-  albumCollection: AlbumCollection;
-  audioCollection: FileCollection;
-  files: string[];
-}): void => {
-  const artistsForFind = Object.entries(artistCollection).map(([id, a]) => ({ ...a, id }));
-  const albumsForFind = Object.entries(albumCollection).map(([id, a]) => ({ ...a, id }));
-  const audiosForFind = Object.entries(audioCollection).map(([id, a]) => ({ ...a, id }));
+export const createApi = (): void => {
+  ipc.on("musa:artists:request", async (event) => {
+    const artistObject = await Api.getArtists();
 
-  ipc.on("musa:artists:request", (event) => {
     event.sender.send("musa:artists:response", artistObject);
   });
 
   ipc.on("musa:artist:request", async (event, id) => {
-    const artist = await Api.getArtistById(artistCollection, id);
+    const artist = await Api.getArtistById(id);
 
     event.sender.send("musa:artist:response", artist);
   });
 
   ipc.on("musa:artistAlbums:request", async (event, id) => {
-    const artist = await Api.getArtistAlbums(artistCollection, albumCollection, id);
+    const artist = await Api.getArtistAlbums(id);
 
     event.sender.send("musa:artistAlbums:response", artist);
   });
 
   ipc.on("musa:album:request", async (event, id) => {
-    const album = await Api.getAlbumById(albumCollection, id);
+    const album = await Api.getAlbumById(id);
 
     event.sender.send("musa:album:response", album);
   });
 
   ipc.on("musa:album:request:AppMain", async (event, id) => {
-    const album = await Api.getAlbumById(albumCollection, id);
+    const album = await Api.getAlbumById(id);
 
     event.sender.send("musa:album:response:AppMain", album);
   });
 
   ipc.on("musa:audio:request", async (event, id) => {
-    const audio = await Api.getAudioById({ audioCollection, albumCollection, id });
+    const audio = await Api.getAudioById({ id });
 
     event.sender.send("musa:audio:response", audio);
   });
@@ -107,11 +86,6 @@ export const createApi = ({
 
   ipc.on("musa:find:request", async (event, query) => {
     const result = await Api.find({
-      artistsForFind,
-      albumsForFind,
-      artistCollection,
-      albumCollection,
-      audioCollection,
       query,
     });
 
@@ -119,14 +93,7 @@ export const createApi = ({
   });
 
   ipc.on("musa:find:request:random", async (event) => {
-    const result = await Api.findRandom({
-      artistsForFind,
-      albumsForFind,
-      artistCollection,
-      albumCollection,
-      audioCollection,
-      audiosForFind,
-    });
+    const result = await Api.findRandom();
 
     event.sender.send("musa:find:response:random", result);
   });
@@ -141,7 +108,7 @@ export const createApi = ({
 
     isScanning = true;
 
-    await Scanner.refresh({ musicLibraryPath, event, scanColor, files, albumCollection });
+    await Scanner.refresh({ musicLibraryPath, event, scanColor });
 
     isScanning = false;
   });
