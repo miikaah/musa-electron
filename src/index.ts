@@ -1,41 +1,13 @@
 import { app, BrowserWindow, protocol, ipcMain as ipc, dialog, screen } from "electron";
 import path from "path";
-import {
-  MusaCoreApi,
-  traverseFileSystem,
-  createMediaCollection,
-  ArtistCollection,
-  AlbumCollection,
-  FileCollection,
-} from "musa-core";
+import { Db, Scanner } from "musa-core";
 import { getState, setState } from "./fs.state";
-import { createApi } from "./api";
+import { createApi, scanColor } from "./api";
 
 const { NODE_ENV } = process.env;
 const isDev = NODE_ENV === "local";
 
-const logOpStart = (title: string) => {
-  console.log(title);
-  console.log("----------------------");
-};
-
-const logOpReport = (start: number, collection: unknown[], name: string) => {
-  console.log(`Took: ${(Date.now() - start) / 1000} seconds`);
-  console.log(`Found: ${collection.length} ${name}`);
-  console.log("----------------------\n");
-};
-
-let files;
-let artistCollection: ArtistCollection;
-let albumCollection: AlbumCollection;
-let audioCollection: FileCollection;
-let imageCollection: FileCollection;
-
-type ArtistObject = {
-  [label: string]: { id: string; name: string; url: string }[];
-};
-let artistObject: ArtistObject;
-
+// This API has to exist so that init works
 ipc.on("musa:settings:request:get", async (event) => {
   const settings = await getState();
 
@@ -63,13 +35,6 @@ ipc.on("musa:addMusicLibraryPath:request", async (event) => {
   await init(event);
 });
 
-// This is very convoluted
-// * let musa:ready event control how scan gets launched via frontend
-//
-// *** Danger of launching multiple scans at the same time
-//
-// TODO: Perhaps a heuristic like 5 min interval of doing full update during startup?
-//
 const init = async (event: Electron.IpcMainEvent) => {
   const state = await getState();
   const { musicLibraryPath } = state;
@@ -83,49 +48,10 @@ const init = async (event: Electron.IpcMainEvent) => {
     return;
   }
 
-  const totalStart = Date.now();
+  Db.init(musicLibraryPath);
 
-  logOpStart("Traversing file system");
-  let start = Date.now();
-  files = await traverseFileSystem(musicLibraryPath);
-  logOpReport(start, files, "files");
-
-  logOpStart("Creating media collection");
-  start = Date.now();
-  const { artistsCol, albumsCol, audioCol, imagesCol } = createMediaCollection({
-    files,
-    baseUrl: musicLibraryPath,
-    isElectron: true,
-  });
-  artistCollection = artistsCol;
-  albumCollection = albumsCol;
-  audioCollection = audioCol;
-  imageCollection = imagesCol;
-
-  artistObject = Object.entries(artistCollection)
-    .map(([id, { name, url }]) => ({ id, name, url }))
-    .reduce((acc: ArtistObject, artist) => {
-      const { name } = artist;
-      const label = name.charAt(0);
-
-      return {
-        ...acc,
-        [label]: [...(acc[label] || []), artist],
-      };
-    }, {});
-
-  console.log(`Took: ${(Date.now() - start) / 1000} seconds`);
-  console.log(`Found: ${Object.keys(artistCollection).length} artists`);
-  console.log(`Found: ${Object.keys(albumCollection).length} albums`);
-  console.log(`Found: ${Object.keys(audioCollection).length} songs`);
-  console.log(`Found: ${Object.keys(imageCollection).length} images`);
-  console.log("----------------------\n");
-
-  logOpStart("Startup Report");
-  console.log(`Took: ${(Date.now() - totalStart) / 1000} seconds total`);
-  console.log("----------------------\n");
-
-  MusaCoreApi.initDb(musicLibraryPath);
+  const { artistObject, artistCollection, albumCollection, audioCollection, files } =
+    await Scanner.init({ musicLibraryPath });
 
   createApi({
     artistObject,
@@ -136,6 +62,8 @@ const init = async (event: Electron.IpcMainEvent) => {
   });
 
   event.sender.send("musa:ready");
+
+  Scanner.update({ event, scanColor, files, albumCollection });
 };
 ipc.once("musa:onInit", init);
 
@@ -230,6 +158,7 @@ app.on("window-all-closed", function () {
   }
 });
 
+// Api for window min max close
 ipc.on("musa:window:minimize", async () => {
   (mainWindow as BrowserWindow).minimize();
 });

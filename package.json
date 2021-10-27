@@ -1,7 +1,7 @@
 {
   "name": "musa-electron",
   "productName": "Musa",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -30,7 +30,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "musa-core": "git@github.com:miikaah/musa-core.git#3e2087b7fca22d2f2611fb11f92f5ea7311f9a1b"
+    "musa-core": "git@github.com:miikaah/musa-core.git#9389357b3fb157c4948de2f8699d006ec31d5d4b"
   },
   "devDependencies": {
     "@types/nedb": "^1.8.12",

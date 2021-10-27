@@ -1,17 +1,18 @@
 import { ipcMain as ipc } from "electron";
-import { MusaCoreApi as Api, ArtistCollection, AlbumCollection, FileCollection } from "musa-core";
-import { startScan } from "./scanner";
+import {
+  Api,
+  Scanner,
+  ArtistCollection,
+  AlbumCollection,
+  FileCollection,
+  ArtistObject,
+} from "musa-core";
+import { getState } from "./fs.state";
 
-type ArtistObject = {
-  [label: string]: { id: string; name: string; url: string }[];
-};
-
-type Params = {
-  artistObject: ArtistObject;
-  artistCollection: ArtistCollection;
-  albumCollection: AlbumCollection;
-  audioCollection: FileCollection;
-  files: string[];
+export const scanColor = {
+  INSERT: "#f00",
+  UPDATE: "#ff0",
+  ALBUM_UPDATE: "#0f0",
 };
 
 export const createApi = ({
@@ -20,7 +21,13 @@ export const createApi = ({
   albumCollection,
   audioCollection,
   files,
-}: Params): void => {
+}: {
+  artistObject: ArtistObject;
+  artistCollection: ArtistCollection;
+  albumCollection: AlbumCollection;
+  audioCollection: FileCollection;
+  files: string[];
+}): void => {
   const artistsForFind = Object.entries(artistCollection).map(([id, a]) => ({ ...a, id }));
   const albumsForFind = Object.entries(albumCollection).map(([id, a]) => ({ ...a, id }));
   const audiosForFind = Object.entries(audioCollection).map(([id, a]) => ({ ...a, id }));
@@ -124,7 +131,18 @@ export const createApi = ({
     event.sender.send("musa:find:response:random", result);
   });
 
+  let isScanning = false;
   ipc.on("musa:scan", async (event) => {
-    await startScan({ event, files, albumCollection });
+    const { musicLibraryPath = "" } = await getState();
+
+    if (!musicLibraryPath || isScanning) {
+      return;
+    }
+
+    isScanning = true;
+
+    await Scanner.refresh({ musicLibraryPath, event, scanColor, files, albumCollection });
+
+    isScanning = false;
   });
 };
