@@ -27,7 +27,7 @@ type State = {
   musicLibraryPath: string;
 };
 
-export const setState = async (state: State): Promise<void> => {
+export const setState = async (state: Partial<State>): Promise<void> => {
   return fs.writeFile(path.join(homedir, stateFile), JSON.stringify(state, null, 2));
 };
 
