@@ -1,6 +1,7 @@
 import { app, BrowserWindow, protocol, ipcMain as ipc, dialog, screen } from "electron";
 import path from "path";
 import {
+  MusaCoreApi,
   traverseFileSystem,
   createMediaCollection,
   ArtistCollection,
@@ -9,7 +10,6 @@ import {
 } from "musa-core";
 import { getState, setState } from "./fs.state";
 import { createApi } from "./api";
-import { initDb } from "./db";
 
 const { NODE_ENV } = process.env;
 const isDev = NODE_ENV === "local";
@@ -125,7 +125,7 @@ const init = async (event: Electron.IpcMainEvent) => {
   console.log(`Took: ${(Date.now() - totalStart) / 1000} seconds total`);
   console.log("----------------------\n");
 
-  initDb(musicLibraryPath);
+  MusaCoreApi.initDb(musicLibraryPath);
 
   createApi({
     artistObject,

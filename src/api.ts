@@ -1,10 +1,5 @@
 import { ipcMain as ipc } from "electron";
-import { ArtistCollection, AlbumCollection, FileCollection } from "musa-core";
-import { getArtistById, getArtistAlbums } from "./api/artist";
-import { getAlbumById } from "./api/album";
-import { getAudioById } from "./api/audio";
-import { find, findRandom } from "./api/find";
-import { getAllThemes, getTheme, insertTheme, removeTheme } from "./db";
+import { MusaCoreApi as Api, ArtistCollection, AlbumCollection, FileCollection } from "musa-core";
 import { startScan } from "./scanner";
 
 type ArtistObject = {
@@ -35,37 +30,37 @@ export const createApi = ({
   });
 
   ipc.on("musa:artist:request", async (event, id) => {
-    const artist = await getArtistById(artistCollection, id);
+    const artist = await Api.getArtistById(artistCollection, id);
 
     event.sender.send("musa:artist:response", artist);
   });
 
   ipc.on("musa:artistAlbums:request", async (event, id) => {
-    const artist = await getArtistAlbums(artistCollection, albumCollection, id);
+    const artist = await Api.getArtistAlbums(artistCollection, albumCollection, id);
 
     event.sender.send("musa:artistAlbums:response", artist);
   });
 
   ipc.on("musa:album:request", async (event, id) => {
-    const album = await getAlbumById(albumCollection, id);
+    const album = await Api.getAlbumById(albumCollection, id);
 
     event.sender.send("musa:album:response", album);
   });
 
   ipc.on("musa:album:request:AppMain", async (event, id) => {
-    const album = await getAlbumById(albumCollection, id);
+    const album = await Api.getAlbumById(albumCollection, id);
 
     event.sender.send("musa:album:response:AppMain", album);
   });
 
   ipc.on("musa:audio:request", async (event, id) => {
-    const audio = await getAudioById({ audioCollection, albumCollection, id });
+    const audio = await Api.getAudioById({ audioCollection, albumCollection, id });
 
     event.sender.send("musa:audio:response", audio);
   });
 
   ipc.on("musa:themes:request:getAll", async (event) => {
-    const themes = await getAllThemes();
+    const themes = await Api.getAllThemes();
 
     event.sender.send(
       "musa:themes:response:getAll",
@@ -77,7 +72,7 @@ export const createApi = ({
   });
 
   ipc.on("musa:themes:request:get", async (event, id) => {
-    const theme = await getTheme(id);
+    const theme = await Api.getTheme(id);
 
     if (!theme) {
       event.sender.send("musa:themes:response:get");
@@ -90,7 +85,7 @@ export const createApi = ({
   });
 
   ipc.on("musa:themes:request:insert", async (event, id, colors) => {
-    const newTheme = await insertTheme(id, colors);
+    const newTheme = await Api.insertTheme(id, colors);
 
     const { path_id } = newTheme;
 
@@ -98,13 +93,13 @@ export const createApi = ({
   });
 
   ipc.on("musa:themes:request:remove", async (event, id) => {
-    await removeTheme(id);
+    await Api.removeTheme(id);
 
     event.sender.send("musa:themes:response:remove");
   });
 
   ipc.on("musa:find:request", async (event, query) => {
-    const result = await find({
+    const result = await Api.find({
       artistsForFind,
       albumsForFind,
       artistCollection,
@@ -117,7 +112,7 @@ export const createApi = ({
   });
 
   ipc.on("musa:find:request:random", async (event) => {
-    const result = await findRandom({
+    const result = await Api.findRandom({
       artistsForFind,
       albumsForFind,
       artistCollection,

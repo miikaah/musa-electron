@@ -1,6 +1,5 @@
 import { sep } from "path";
-import { audioExts, UrlSafeBase64, AlbumCollection } from "musa-core";
-import { getAllAudios, insertAudio, upsertAudio, upsertAlbum } from "./db";
+import { MusaCoreApi as Api, audioExts, UrlSafeBase64, AlbumCollection } from "musa-core";
 
 const { DISABLE_SCANNING } = process.env;
 const isScanningDisabled = DISABLE_SCANNING === "true";
@@ -23,7 +22,7 @@ export const startScan = async ({ event, files, albumCollection }: Params): Prom
   }
 
   const start = Date.now();
-  const audios = await getAllAudios();
+  const audios = await Api.getAllAudios();
   const audioIdsInDb = audios.map((a) => a.path_id);
   const cleanFiles = files.filter((file) =>
     audioExts.some((ext) => file.toLowerCase().endsWith(ext))
@@ -65,10 +64,10 @@ export const startScan = async ({ event, files, albumCollection }: Params): Prom
   for (let i = 0; i < filesToInsert.length; i += 4) {
     try {
       await Promise.all([
-        insertAudio(filesToInsert[i]),
-        insertAudio(filesToInsert[i + 1]),
-        insertAudio(filesToInsert[i + 2]),
-        insertAudio(filesToInsert[i + 3]),
+        Api.insertAudio(filesToInsert[i]),
+        Api.insertAudio(filesToInsert[i + 1]),
+        Api.insertAudio(filesToInsert[i + 2]),
+        Api.insertAudio(filesToInsert[i + 3]),
       ]);
 
       if (process.stdout.clearLine) {
@@ -105,19 +104,19 @@ export const startScan = async ({ event, files, albumCollection }: Params): Prom
   for (let i = 0; i < filesToUpdate.length; i += 4) {
     try {
       await Promise.all([
-        upsertAudio({
+        Api.upsertAudio({
           ...filesToUpdate[i],
           quiet: true,
         }),
-        upsertAudio({
+        Api.upsertAudio({
           ...filesToUpdate[i + 1],
           quiet: true,
         }),
-        upsertAudio({
+        Api.upsertAudio({
           ...filesToUpdate[i + 2],
           quiet: true,
         }),
-        upsertAudio({
+        Api.upsertAudio({
           ...filesToUpdate[i + 3],
           quiet: true,
         }),
@@ -140,10 +139,10 @@ export const startScan = async ({ event, files, albumCollection }: Params): Prom
   for (let i = 0; i < albums.length; i += 4) {
     try {
       await Promise.all([
-        upsertAlbum(albums[i]),
-        upsertAlbum(albums[i + 1]),
-        upsertAlbum(albums[i + 2]),
-        upsertAlbum(albums[i + 3]),
+        Api.upsertAlbum(albums[i]),
+        Api.upsertAlbum(albums[i + 1]),
+        Api.upsertAlbum(albums[i + 2]),
+        Api.upsertAlbum(albums[i + 3]),
       ]);
       event.sender.send("musa:scan:update", i);
     } catch (err) {
