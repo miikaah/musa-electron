@@ -85,9 +85,7 @@ export const createApi = (): void => {
   });
 
   ipc.on("musa:find:request", async (event, query) => {
-    const result = await Api.find({
-      query,
-    });
+    const result = await Api.find({ query });
 
     event.sender.send("musa:find:response", result);
   });
