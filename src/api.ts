@@ -1,4 +1,5 @@
 import { ipcMain as ipc } from "electron";
+import path from "path";
 import { Api, Scanner } from "musa-core";
 import { getState } from "./fs.state";
 
@@ -8,7 +9,7 @@ export const scanColor = {
   ALBUM_UPDATE: "#0f0",
 };
 
-export const createApi = (): void => {
+export const createApi = ({ musicLibraryPath }: { musicLibraryPath: string }): void => {
   ipc.on("musa:artists:request", async (event) => {
     const artistObject = await Api.getArtists();
 
@@ -58,7 +59,7 @@ export const createApi = (): void => {
   });
 
   ipc.on("musa:themes:request:get", async (event, id) => {
-    const theme = await Api.getTheme(id);
+    const theme = await Api.getTheme(getThemeId(id, musicLibraryPath));
 
     if (!theme) {
       event.sender.send("musa:themes:response:get");
@@ -71,7 +72,7 @@ export const createApi = (): void => {
   });
 
   ipc.on("musa:themes:request:insert", async (event, id, colors) => {
-    const newTheme = await Api.insertTheme(id, colors);
+    const newTheme = await Api.insertTheme(getThemeId(id, musicLibraryPath), colors);
 
     const { path_id } = newTheme;
 
@@ -79,7 +80,7 @@ export const createApi = (): void => {
   });
 
   ipc.on("musa:themes:request:remove", async (event, id) => {
-    await Api.removeTheme(id);
+    await Api.removeTheme(getThemeId(id, musicLibraryPath));
 
     event.sender.send("musa:themes:response:remove");
   });
@@ -111,3 +112,7 @@ export const createApi = (): void => {
     isScanning = false;
   });
 };
+
+function getThemeId(id: string, musicLibraryPath: string) {
+  return id.replace(path.join(`file://${musicLibraryPath}`, musicLibraryPath), "");
+}

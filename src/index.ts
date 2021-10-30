@@ -50,7 +50,7 @@ const init = async (event: Electron.IpcMainEvent) => {
 
   Db.init(musicLibraryPath);
   await Scanner.init({ musicLibraryPath });
-  createApi();
+  createApi({ musicLibraryPath });
   event.sender.send("musa:ready");
 
   Scanner.update({ event, scanColor });
