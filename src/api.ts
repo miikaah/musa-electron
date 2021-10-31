@@ -1,6 +1,5 @@
 import { ipcMain as ipc } from "electron";
-import path from "path";
-import { Api, Scanner } from "musa-core";
+import { Api, Scanner, UrlSafeBase64, DbTheme } from "musa-core";
 import { getState } from "./fs.state";
 
 export const scanColor = {
@@ -9,7 +8,7 @@ export const scanColor = {
   ALBUM_UPDATE: "#0f0",
 };
 
-export const createApi = ({ musicLibraryPath }: { musicLibraryPath: string }): void => {
+export const createApi = (musicLibraryPath: string): void => {
   ipc.on("musa:artists:request", async (event) => {
     const artistObject = await Api.getArtists();
 
@@ -34,12 +33,6 @@ export const createApi = ({ musicLibraryPath }: { musicLibraryPath: string }): v
     event.sender.send("musa:album:response", album);
   });
 
-  ipc.on("musa:album:request:AppMain", async (event, id) => {
-    const album = await Api.getAlbumById(id);
-
-    event.sender.send("musa:album:response:AppMain", album);
-  });
-
   ipc.on("musa:audio:request", async (event, id) => {
     const audio = await Api.getAudioById({ id });
 
@@ -49,13 +42,7 @@ export const createApi = ({ musicLibraryPath }: { musicLibraryPath: string }): v
   ipc.on("musa:themes:request:getAll", async (event) => {
     const themes = await Api.getAllThemes();
 
-    event.sender.send(
-      "musa:themes:response:getAll",
-      themes.map(({ colors, path_id }) => ({
-        id: path_id,
-        colors,
-      }))
-    );
+    event.sender.send("musa:themes:response:getAll", themes.map(toApiTheme));
   });
 
   ipc.on("musa:themes:request:get", async (event, id) => {
@@ -66,21 +53,17 @@ export const createApi = ({ musicLibraryPath }: { musicLibraryPath: string }): v
       return;
     }
 
-    const { colors, path_id } = theme;
-
-    event.sender.send("musa:themes:response:get", { id: path_id, colors });
+    event.sender.send("musa:themes:response:get", toApiTheme(theme));
   });
 
   ipc.on("musa:themes:request:insert", async (event, id, colors) => {
     const newTheme = await Api.insertTheme(getThemeId(id, musicLibraryPath), colors);
 
-    const { path_id } = newTheme;
-
-    event.sender.send("musa:themes:response:insert", { id: path_id, colors });
+    event.sender.send("musa:themes:response:insert", toApiTheme(newTheme));
   });
 
   ipc.on("musa:themes:request:remove", async (event, id) => {
-    await Api.removeTheme(getThemeId(id, musicLibraryPath));
+    await Api.removeTheme(id);
 
     event.sender.send("musa:themes:response:remove");
   });
@@ -114,5 +97,9 @@ export const createApi = ({ musicLibraryPath }: { musicLibraryPath: string }): v
 };
 
 function getThemeId(id: string, musicLibraryPath: string) {
-  return id.replace(path.join(`file://${musicLibraryPath}`, musicLibraryPath), "");
+  return UrlSafeBase64.encode(decodeURI(id).replace(`file://${musicLibraryPath}/`, ""));
+}
+
+function toApiTheme({ path_id, filename, colors }: DbTheme) {
+  return { id: path_id, filename, colors };
 }
