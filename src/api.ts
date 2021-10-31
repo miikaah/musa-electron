@@ -1,6 +1,5 @@
 import { ipcMain as ipc } from "electron";
 import { Api, Scanner, UrlSafeBase64, DbTheme } from "musa-core";
-import { getState } from "./fs.state";
 
 export const scanColor = {
   INSERT: "#f00",
@@ -82,15 +81,13 @@ export const createApi = (musicLibraryPath: string): void => {
 
   let isScanning = false;
   ipc.on("musa:scan", async (event) => {
-    const { musicLibraryPath = "" } = await getState();
-
     if (!musicLibraryPath || isScanning) {
       return;
     }
 
     isScanning = true;
 
-    await Scanner.refresh({ musicLibraryPath, event, scanColor });
+    await Scanner.refresh({ musicLibraryPath, isElectron: true, event, scanColor });
 
     isScanning = false;
   });
