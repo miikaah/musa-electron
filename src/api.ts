@@ -94,7 +94,15 @@ export const createApi = (musicLibraryPath: string): void => {
 };
 
 function getThemeId(id: string, musicLibraryPath: string) {
-  return UrlSafeBase64.encode(decodeURI(id).replace(`file://${musicLibraryPath}/`, ""));
+  let libPath = "";
+
+  if (process.platform === "win32") {
+    libPath = `file:///${musicLibraryPath.replace(/\\/g, "/")}/`;
+  } else {
+    libPath = `file://${musicLibraryPath}/`;
+  }
+
+  return UrlSafeBase64.encode(decodeURI(id).replace(libPath, ""));
 }
 
 function toApiTheme({ path_id, filename, colors }: DbTheme) {
