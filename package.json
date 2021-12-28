@@ -30,7 +30,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "musa-core": "git@github.com:miikaah/musa-core.git#151e2b5c39a2b5ea6741db6505a6195c1b7ad91c"
+    "musa-core": "git@github.com:miikaah/musa-core.git#v3.2.0"
   },
   "devDependencies": {
     "@types/nedb": "^1.8.12",
