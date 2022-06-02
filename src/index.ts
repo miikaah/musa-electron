@@ -1,21 +1,21 @@
 import { app, BrowserWindow, protocol, ipcMain as ipc, dialog, screen } from "electron";
 import path from "path";
-import { Db, Scanner } from "musa-core";
-import { getState, setState } from "./fs.state";
+import { Db, Scanner, Fs } from "musa-core";
 import { createApi, scanColor } from "./api";
 
 const { NODE_ENV } = process.env;
 const isDev = NODE_ENV === "local";
+const stateFile = `${isDev ? ".dev" : ""}.musa-electron.state.v1.json`;
 
 // This API has to exist so that init works
 ipc.on("musa:settings:request:get", async (event) => {
-  const settings = await getState();
+  const settings = await Fs.getState(stateFile);
 
   event.sender.send("musa:settings:response:get", settings);
 });
 
 ipc.on("musa:settings:request:insert", async (event, settings) => {
-  await setState(settings);
+  await Fs.setState(stateFile, settings);
 
   event.sender.send("musa:settings:response:insert");
 });
@@ -31,13 +31,13 @@ ipc.on("musa:addMusicLibraryPath:request", async (event) => {
   console.log(`New music library path added: ${newPath}\n`);
 
   event.sender.send("musa:addMusicLibraryPath:response", newPath);
-  await setState({ musicLibraryPath: newPath });
+  await Fs.setState(stateFile, { musicLibraryPath: newPath });
   await init(event);
 });
 
 const init = async (event: Electron.IpcMainEvent) => {
-  const state = await getState();
-  const { musicLibraryPath } = state;
+  const state = await Fs.getState(stateFile);
+  const musicLibraryPath = state?.musicLibraryPath;
   console.log("state", state, "\n");
 
   if (!musicLibraryPath) {

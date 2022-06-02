@@ -1,5 +1,5 @@
 import { ipcMain as ipc } from "electron";
-import { Api, Scanner, UrlSafeBase64, DbTheme } from "musa-core";
+import { Api, Scanner, UrlSafeBase64 } from "musa-core";
 
 export const scanColor = {
   INSERT: "#f00",
@@ -41,24 +41,24 @@ export const createApi = (musicLibraryPath: string): void => {
   ipc.on("musa:themes:request:getAll", async (event) => {
     const themes = await Api.getAllThemes();
 
-    event.sender.send("musa:themes:response:getAll", themes.map(toApiTheme));
+    event.sender.send("musa:themes:response:getAll", themes);
   });
 
   ipc.on("musa:themes:request:get", async (event, id) => {
-    const theme = await Api.getTheme(getThemeId(id, musicLibraryPath));
+    try {
+      const theme = await Api.getTheme(getThemeId(id, musicLibraryPath));
 
-    if (!theme) {
+      event.sender.send("musa:themes:response:get", theme);
+    } catch (error) {
+      console.error(error);
       event.sender.send("musa:themes:response:get");
-      return;
     }
-
-    event.sender.send("musa:themes:response:get", toApiTheme(theme));
   });
 
   ipc.on("musa:themes:request:insert", async (event, id, colors) => {
     const newTheme = await Api.insertTheme(getThemeId(id, musicLibraryPath), colors);
 
-    event.sender.send("musa:themes:response:insert", toApiTheme(newTheme));
+    event.sender.send("musa:themes:response:insert", newTheme);
   });
 
   ipc.on("musa:themes:request:remove", async (event, id) => {
@@ -103,8 +103,4 @@ function getThemeId(id: string, musicLibraryPath: string) {
   }
 
   return UrlSafeBase64.encode(decodeURI(id).replace(libPath, ""));
-}
-
-function toApiTheme({ path_id, filename, colors }: DbTheme) {
-  return { id: path_id, filename, colors };
 }
