@@ -29,7 +29,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "musa-core": "git@github.com:miikaah/musa-core.git#v5.0.4"
+    "musa-core": "git@github.com:miikaah/musa-core.git#v6.0.0"
   },
   "devDependencies": {
     "@types/node": "^17.0.35",

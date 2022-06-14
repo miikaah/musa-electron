@@ -53,7 +53,7 @@ const init = async (event: Electron.IpcMainEvent) => {
   createApi(musicLibraryPath);
   event.sender.send("musa:ready");
 
-  Scanner.update({ event, scanColor });
+  Scanner.update({ musicLibraryPath, event, scanColor });
 };
 ipc.once("musa:onInit", init);
 
