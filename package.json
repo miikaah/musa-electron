@@ -29,9 +29,10 @@
   },
   "license": "MIT",
   "dependencies": {
-    "musa-core": "git@github.com:miikaah/musa-core.git#v6.0.0"
+    "musa-core": "git@github.com:miikaah/musa-core.git#v6.1.0"
   },
   "devDependencies": {
+    "@types/jest": "^28.1.1",
     "@types/node": "^17.0.35",
     "@types/urlsafe-base64": "^1.0.28",
     "@typescript-eslint/eslint-plugin": "^5.26.0",
