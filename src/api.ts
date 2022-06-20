@@ -74,7 +74,7 @@ export const createApi = (musicLibraryPath: string): void => {
   });
 
   ipc.on("musa:find:request:random", async (event) => {
-    const result = await Api.findRandom({});
+    const result = await Api.findRandom({ limit: 8 });
 
     event.sender.send("musa:find:response:random", result);
   });
