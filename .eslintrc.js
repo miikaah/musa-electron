@@ -18,6 +18,6 @@ module.exports = {
   rules: {
     "no-console": "off",
     "no-async-promise-executor": "off",
-    "prettier/prettier": 1
+    "prettier/prettier": 1,
   },
 };
