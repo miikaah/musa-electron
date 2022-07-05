@@ -8,11 +8,17 @@ const isDev = NODE_ENV === "local";
 const stateFile = `${isDev ? ".dev" : ""}.musa-electron.state.v1.json`;
 
 // This API has to exist so that init works
-ipc.on("musa:settings:request:get", async (event) => {
+ipc.handle("getSettings", async (event) => {
   const settings = await Fs.getState(stateFile);
 
   event.sender.send("musa:settings:response:get", settings);
 });
+
+// ipc.on("musa:settings:request:get", async (event) => {
+//   const settings = await Fs.getState(stateFile);
+//
+//   event.sender.send("musa:settings:response:get", settings);
+// });
 
 ipc.on("musa:settings:request:insert", async (event, settings) => {
   await Fs.setState(stateFile, settings);
@@ -78,7 +84,7 @@ function createWindow() {
           nodeIntegration: true,
           nodeIntegrationInSubFrames: true,
           nodeIntegrationInWorker: true,
-          contextIsolation: false,
+          contextIsolation: true,
           webSecurity: false,
         }
       : {
@@ -98,6 +104,7 @@ function createWindow() {
     frame: false,
     webPreferences: {
       ...getWebPreferencesByEnv(),
+      preload: path.join(__dirname, "preload.js"),
     },
   });
 
