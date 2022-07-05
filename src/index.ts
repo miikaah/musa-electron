@@ -1,32 +1,26 @@
 import { app, BrowserWindow, protocol, ipcMain as ipc, dialog, screen } from "electron";
 import path from "path";
-import { Db, Scanner, Fs } from "musa-core";
+import { Api, Db, Scanner, Fs } from "musa-core";
 import { createApi, scanColor } from "./api";
 
 const { NODE_ENV } = process.env;
 const isDev = NODE_ENV === "local";
 const stateFile = `${isDev ? ".dev" : ""}.musa-electron.state.v1.json`;
 
+// Note: This method can only be used before the ready event of the app module gets emitted
+// and can be called only once.
+protocol.registerSchemesAsPrivileged([{ scheme: "media", privileges: { bypassCSP: true } }]);
+
 // This API has to exist so that init works
-ipc.handle("getSettings", async (event) => {
-  const settings = await Fs.getState(stateFile);
-
-  event.sender.send("musa:settings:response:get", settings);
+ipc.handle("getSettings", async () => {
+  return Fs.getState(stateFile);
 });
 
-// ipc.on("musa:settings:request:get", async (event) => {
-//   const settings = await Fs.getState(stateFile);
-//
-//   event.sender.send("musa:settings:response:get", settings);
-// });
-
-ipc.on("musa:settings:request:insert", async (event, settings) => {
-  await Fs.setState(stateFile, settings);
-
-  event.sender.send("musa:settings:response:insert");
+ipc.handle("insertSettings", async (_, settings) => {
+  return Fs.setState(stateFile, settings);
 });
 
-ipc.on("musa:addMusicLibraryPath:request", async (event) => {
+ipc.handle("addMusicLibraryPath", async (event) => {
   const paths = dialog.showOpenDialogSync({ properties: ["openDirectory"] });
 
   if (!Array.isArray(paths) || paths.length < 1) {
@@ -36,14 +30,21 @@ ipc.on("musa:addMusicLibraryPath:request", async (event) => {
   const newPath = paths[0];
   console.log(`New music library path added: ${newPath}\n`);
 
-  event.sender.send("musa:addMusicLibraryPath:response", newPath);
   await Fs.setState(stateFile, { musicLibraryPath: newPath });
   await init(event);
+
+  return newPath;
 });
 
-const init = async (event: Electron.IpcMainEvent) => {
+ipc.handle("getArtists", async () => {
+  return Api.getArtists();
+});
+
+let musicLibraryPath = "";
+
+const init = async (event: Electron.IpcMainInvokeEvent) => {
   const state = await Fs.getState(stateFile);
-  const musicLibraryPath = state?.musicLibraryPath;
+  musicLibraryPath = state?.musicLibraryPath || "";
   console.log("state", state, "\n");
 
   if (!musicLibraryPath) {
@@ -54,18 +55,18 @@ const init = async (event: Electron.IpcMainEvent) => {
     return;
   }
 
+  await createApi(musicLibraryPath);
   Db.init(musicLibraryPath);
-  await Scanner.init({ musicLibraryPath, isElectron: true });
-  createApi(musicLibraryPath);
+  await Scanner.init({ musicLibraryPath, isElectron: true, electronFileProtocol: "media://" });
   event.sender.send("musa:ready");
 
   Scanner.update({ musicLibraryPath, event, scanColor });
 };
-ipc.once("musa:onInit", init);
+ipc.handle("onInit", init);
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
-let mainWindow: BrowserWindow | null;
+let mainWindow: BrowserWindow;
 
 function createWindow() {
   const allDisplays = screen.getAllDisplays();
@@ -77,24 +78,6 @@ function createWindow() {
         (biggestDisplay = display.size.width > biggestDisplay.size.width ? display : biggestDisplay)
     );
   }
-
-  const getWebPreferencesByEnv = () => {
-    return isDev
-      ? {
-          nodeIntegration: true,
-          nodeIntegrationInSubFrames: true,
-          nodeIntegrationInWorker: true,
-          contextIsolation: true,
-          webSecurity: false,
-        }
-      : {
-          nodeIntegration: true,
-          nodeIntegrationInSubFrames: true,
-          nodeIntegrationInWorker: true,
-          contextIsolation: false,
-          webSecurity: true,
-        };
-  };
   // Create the browser window.
   mainWindow = new BrowserWindow({
     x: biggestDisplay.bounds.x,
@@ -103,7 +86,6 @@ function createWindow() {
     height: 980,
     frame: false,
     webPreferences: {
-      ...getWebPreferencesByEnv(),
       preload: path.join(__dirname, "preload.js"),
     },
   });
@@ -118,32 +100,37 @@ function createWindow() {
 
   if (isDev) {
     mainWindow.webContents.openDevTools();
-    protocol.registerFileProtocol("file", (request, callback) => {
-      const pathname = decodeURI(request.url.replace("file://", ""));
-      callback(pathname);
-    });
   }
 
-  // Emitted when the window is closed.
+  protocol.registerFileProtocol("media", (request, callback) => {
+    const pathname = decodeURI(request.url.replace("media://", "").replace("media:\\", ""));
+    const filepath = path.join(musicLibraryPath, pathname);
+
+    callback(filepath);
+  });
+
   mainWindow.on("closed", function () {
     // Dereference the window object, usually you would store windows
     // in an array if your app supports multi windows, this is the time
     // when you should delete the corresponding element.
+    // @ts-expect-error typecheck doesn't add any value here
     mainWindow = null;
   });
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
-app.on("ready", createWindow);
+// Enable sandbox for all renderers
+app.enableSandbox();
 
-app.on("activate", function () {
-  // On macOS it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
+app.whenReady().then(async () => {
+  createWindow();
+
+  app.on("activate", () => {
+    // On macOS it's common to re-create a window in the app when the
+    // dock icon is clicked and there are no other windows open.
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
 });
 
 // Quit when all windows are closed.
@@ -156,29 +143,26 @@ app.on("window-all-closed", function () {
 });
 
 // Api for window min max close
-ipc.on("musa:window:minimize", async () => {
-  (mainWindow as BrowserWindow).minimize();
+ipc.handle("minimizeWindow", async () => {
+  mainWindow.minimize();
 });
 
-ipc.on("musa:window:maximize", async () => {
-  (mainWindow as BrowserWindow).maximize();
+ipc.handle("maximizeWindow", async () => {
+  mainWindow.maximize();
 });
 
-ipc.on("musa:window:unmaximize", async () => {
-  (mainWindow as BrowserWindow).unmaximize();
+ipc.handle("unmaximizeWindow", async () => {
+  mainWindow.unmaximize();
 });
 
-ipc.on("musa:window:isMaximized:request", async (event) => {
-  event.sender.send(
-    "musa:window:isMaximized:response",
-    (mainWindow as BrowserWindow).isMaximized()
-  );
+ipc.handle("isWindowMaximized", async () => {
+  return mainWindow.isMaximized();
 });
 
-ipc.on("musa:window:close", async () => {
-  (mainWindow as BrowserWindow).close();
+ipc.handle("closeWindow", async () => {
+  mainWindow.close();
 });
 
-ipc.on("musa:window:platform:request", async (event) => {
-  event.sender.send("musa:window:platform:response", process.platform);
+ipc.handle("getPlatform", async () => {
+  return process.platform;
 });

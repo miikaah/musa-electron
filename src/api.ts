@@ -7,80 +7,61 @@ export const scanColor = {
   ALBUM_UPDATE: "#0f0",
 };
 
-export const createApi = (musicLibraryPath: string): void => {
-  ipc.on("musa:artists:request", async (event) => {
-    const artistObject = await Api.getArtists();
+let isInit = false;
 
-    event.sender.send("musa:artists:response", artistObject);
+export const createApi = async (musicLibraryPath: string): Promise<void> => {
+  if (isInit) {
+    return;
+  }
+
+  ipc.handle("getArtistById", async (_, id) => {
+    return Api.getArtistById(id);
   });
 
-  ipc.on("musa:artist:request", async (event, id) => {
-    const artist = await Api.getArtistById(id);
-
-    event.sender.send("musa:artist:response", artist);
+  ipc.handle("getArtistAlbums", async (_, id) => {
+    return Api.getArtistAlbums(id);
   });
 
-  ipc.on("musa:artistAlbums:request", async (event, id) => {
-    const artist = await Api.getArtistAlbums(id);
-
-    event.sender.send("musa:artistAlbums:response", artist);
+  ipc.handle("getAlbumById", async (_, id) => {
+    return Api.getAlbumById(id);
   });
 
-  ipc.on("musa:album:request", async (event, id) => {
-    const album = await Api.getAlbumById(id);
-
-    event.sender.send("musa:album:response", album);
+  ipc.handle("getAudioById", async (_, id) => {
+    return Api.getAudioById({ id });
   });
 
-  ipc.on("musa:audio:request", async (event, id) => {
-    const audio = await Api.getAudioById({ id });
-
-    event.sender.send("musa:audio:response", audio);
+  ipc.handle("getAllThemes", async () => {
+    return Api.getAllThemes();
   });
 
-  ipc.on("musa:themes:request:getAll", async (event) => {
-    const themes = await Api.getAllThemes();
-
-    event.sender.send("musa:themes:response:getAll", themes);
-  });
-
-  ipc.on("musa:themes:request:get", async (event, id) => {
+  ipc.handle("getThemeById", async (_, id) => {
     try {
       const theme = await Api.getTheme(getThemeId(id, musicLibraryPath));
 
-      event.sender.send("musa:themes:response:get", theme);
+      return theme;
     } catch (error) {
       console.error(error);
-      event.sender.send("musa:themes:response:get");
     }
   });
 
-  ipc.on("musa:themes:request:insert", async (event, id, colors) => {
-    const newTheme = await Api.insertTheme(getThemeId(id, musicLibraryPath), colors);
-
-    event.sender.send("musa:themes:response:insert", newTheme);
+  ipc.handle("insertTheme", async (_, id, colors) => {
+    return Api.insertTheme(getThemeId(id, musicLibraryPath), colors);
   });
 
-  ipc.on("musa:themes:request:remove", async (event, id) => {
-    await Api.removeTheme(id);
-
-    event.sender.send("musa:themes:response:remove");
+  ipc.handle("removeThemeById", async (_, id) => {
+    return Api.removeTheme(id);
   });
 
-  ipc.on("musa:find:request", async (event, query) => {
-    const result = await Api.find({ query });
-
-    event.sender.send("musa:find:response", result);
+  ipc.handle("find", async (_, query) => {
+    return Api.find({ query });
   });
 
-  ipc.on("musa:find:request:random", async (event) => {
-    const result = await Api.findRandom({ limit: 8 });
-
-    event.sender.send("musa:find:response:random", result);
+  ipc.handle("findRandom", async () => {
+    return Api.findRandom({ limit: 8 });
   });
 
   let isScanning = false;
-  ipc.on("musa:scan", async (event) => {
+  ipc.handle("scan", async (event) => {
     if (!musicLibraryPath || isScanning) {
       return;
     }
@@ -91,6 +72,8 @@ export const createApi = (musicLibraryPath: string): void => {
 
     isScanning = false;
   });
+
+  isInit = true;
 };
 
 function getThemeId(id: string, musicLibraryPath: string) {
