@@ -1,7 +1,7 @@
 {
   "name": "musa-electron",
   "productName": "Musa",
-  "version": "3.3.0",
+  "version": "4.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
