@@ -85,6 +85,7 @@ function createWindow() {
     width: 1600,
     height: 980,
     frame: false,
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
     },
@@ -107,6 +108,11 @@ function createWindow() {
     const filepath = path.join(musicLibraryPath, pathname);
 
     callback(filepath);
+  });
+
+  // Prevent visual flash of empty frame
+  mainWindow.once("ready-to-show", () => {
+    mainWindow.show();
   });
 
   mainWindow.on("closed", function () {
