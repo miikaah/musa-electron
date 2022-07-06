@@ -103,7 +103,7 @@ function createWindow() {
   }
 
   protocol.registerFileProtocol("media", (request, callback) => {
-    const pathname = decodeURI(request.url.replace("media://", "").replace("media:\\", ""));
+    const pathname = decodeURI(request.url.replace("media:/", "").replace("media:\\", ""));
     const filepath = path.join(musicLibraryPath, pathname);
 
     callback(filepath);
