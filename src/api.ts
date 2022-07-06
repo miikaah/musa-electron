@@ -53,7 +53,7 @@ export const createApi = async (musicLibraryPath: string): Promise<void> => {
   });
 
   ipc.handle("find", async (_, query) => {
-    return Api.find({ query });
+    return Api.find({ query, limit: 32 });
   });
 
   ipc.handle("findRandom", async () => {
