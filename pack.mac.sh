@@ -3,9 +3,10 @@ echo "Building Musa backend..."
 rm -rf dist
 npm run build
 
+echo ""
 echo "Building Musa frontend..."
 cd $FRONTEND_DIR
-npm run build:electron
+node build.electron.js
 
 echo "Packaging Musa into an Electron app for Mac..."
 cd $BACKEND_DIR
