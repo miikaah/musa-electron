@@ -1,4 +1,3 @@
-const { fs } = require("fs/promises");
 const { build } = require("esbuild");
 const { nodeExternalsPlugin } = require("esbuild-node-externals");
 
