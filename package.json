@@ -10,7 +10,7 @@
     "start": "env-cmd -f .env.local electron index.js",
     "test": "jest --coverage",
     "test:w": "jest --coverage --watch",
-    "build": "node esbuild.js && shx cp src/preload.js dist/ && shx cp ./{package.json,package-lock.json} dist/ && cd dist && npm ci --omit=dev",
+    "build": "shx rm -rf dist && node esbuild.js && shx cp src/preload.js dist/ && shx cp ./{package.json,package-lock.json} dist/ && cd dist && npm ci --omit=dev",
     "tsc:w": "tsc --watch --noEmit",
     "package:mac": "electron-packager ./dist --overwrite --platform=darwin --arch=x64 --icon=assets/icons/musa1024x1024.icns --prune=true --out=release-builds",
     "pack:mac": "env-cmd bash pack.mac.sh",

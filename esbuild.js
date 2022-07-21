@@ -7,7 +7,7 @@ const main = async () => {
     bundle: true,
     outdir: "dist",
     platform: "node",
-    target: "es6",
+    target: "es2020",
     format: "cjs",
     plugins: [nodeExternalsPlugin()],
   });

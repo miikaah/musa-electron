@@ -18,6 +18,7 @@ module.exports = {
   rules: {
     "no-console": "off",
     "no-async-promise-executor": "off",
+    "@typescript-eslint/no-var-requires": "off",
     "prettier/prettier": 1,
   },
 };
