@@ -1,7 +1,8 @@
 const { build } = require("esbuild");
-const { nodeExternalsPlugin } = require("esbuild-node-externals");
 
 const main = async () => {
+  const start = Date.now();
+
   build({
     entryPoints: ["src/index.ts"],
     bundle: true,
@@ -9,7 +10,30 @@ const main = async () => {
     platform: "node",
     target: "es2020",
     format: "cjs",
-    plugins: [nodeExternalsPlugin()],
+    plugins: [
+      {
+        name: "exclude-electron",
+        setup(build) {
+          const dependencies = new Set();
+
+          build.onResolve({ namespace: "file", filter: /.*/ }, (args) => {
+            if (!args.path.startsWith(".")) {
+              dependencies.add(args.path);
+            }
+
+            return args.path.startsWith("electron") ? { path: args.path, external: true } : null;
+          });
+
+          build.onEnd(() => {
+            const deps = Array.from(dependencies.values()).sort((a, b) => a.localeCompare(b));
+            console.log(`List of dependencies (${deps.length})`);
+            console.log("--------------------");
+            console.log(deps);
+            console.log(`Build took ${(Date.now() - start) / 1000} seconds\n`);
+          });
+        },
+      },
+    ],
   });
 };
 
