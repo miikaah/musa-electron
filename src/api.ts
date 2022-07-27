@@ -1,6 +1,5 @@
 import { ipcMain as ipc } from "electron";
 import { Api, Scanner, UrlSafeBase64 } from "@miikaah/musa-core";
-import { writeTags } from "./metadata";
 
 export const scanColor = {
   INSERT: "#f00",
@@ -61,8 +60,12 @@ export const createApi = async (musicLibraryPath: string): Promise<void> => {
     return Api.findRandom({ limit: 8 });
   });
 
-  ipc.handle("writeTags", async (_, tags) => {
-    return writeTags(tags);
+  ipc.handle("writeTags", async (_, id, tags) => {
+    try {
+      await Api.writeTags(musicLibraryPath, id, tags);
+    } catch (error) {
+      return new Error("FAILED_TO_UPDATE_TAGS");
+    }
   });
 
   let isScanning = false;

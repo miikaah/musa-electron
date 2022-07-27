@@ -43,5 +43,5 @@ contextBridge.exposeInMainWorld("electron", {
   removeThemeById: (id) => ipc.invoke("removeThemeById", id),
   find: (query) => ipc.invoke("find", query),
   findRandom: () => ipc.invoke("findRandom"),
-  writeTags: (tags) => ipc.invoke("writeTags", tags),
+  writeTags: (id, tags) => ipc.invoke("writeTags", id, tags),
 });
