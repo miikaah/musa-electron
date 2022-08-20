@@ -29,7 +29,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@miikaah/musa-core": "7.5.0"
+    "@miikaah/musa-core": "7.5.1"
   },
   "devDependencies": {
     "@types/jest": "^28.1.1",
