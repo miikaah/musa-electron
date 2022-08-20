@@ -60,6 +60,10 @@ export const createApi = async (musicLibraryPath: string): Promise<void> => {
     return Api.findRandom({ limit: 8 });
   });
 
+  ipc.handle("findRandomWithLockedSearchTerm", async (_, lockedSearchTerm: string) => {
+    return Api.findRandom({ limit: 8, lockedSearchTerm });
+  });
+
   ipc.handle("writeTags", async (_, id, tags) => {
     try {
       await Api.writeTags(musicLibraryPath, id, tags);
