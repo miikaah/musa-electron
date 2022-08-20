@@ -52,6 +52,10 @@ export const createApi = async (musicLibraryPath: string): Promise<void> => {
     return Api.removeTheme(id);
   });
 
+  ipc.handle("getAllGenres", async () => {
+    return Api.getAllGenres();
+  });
+
   ipc.handle("find", async (_, query) => {
     return Api.find({ query, limit: 16 });
   });
