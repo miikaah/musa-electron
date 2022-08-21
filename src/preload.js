@@ -37,6 +37,7 @@ contextBridge.exposeInMainWorld("electron", {
   getArtistAlbums: (id) => ipc.invoke("getArtistAlbums", id),
   getAlbumById: (id) => ipc.invoke("getAlbumById", id),
   getAudioById: (id) => ipc.invoke("getAudioById", id),
+  getAudiosByFilepaths: (paths) => ipc.invoke("getAudiosByFilepaths", paths),
   getAllThemes: () => ipc.invoke("getAllThemes"),
   getThemeById: (id) => ipc.invoke("getThemeById", id),
   insertTheme: (id, colors) => ipc.invoke("insertTheme", id, colors),

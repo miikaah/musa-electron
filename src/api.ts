@@ -30,6 +30,10 @@ export const createApi = async (musicLibraryPath: string): Promise<void> => {
     return Api.getAudioById({ id });
   });
 
+  ipc.handle("getAudiosByFilepaths", async (_, paths: string[]) => {
+    return Api.getAudiosByFilepaths(paths, musicLibraryPath);
+  });
+
   ipc.handle("getAllThemes", async () => {
     return Api.getAllThemes();
   });
