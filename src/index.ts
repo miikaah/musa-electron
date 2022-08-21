@@ -114,6 +114,13 @@ function createWindow() {
 
   // Prevent visual flash of empty frame
   mainWindow.once("ready-to-show", () => {
+    Scanner.setScanProgressListener((ratio, mode) => {
+      if (!ratio) {
+        return;
+      }
+
+      mainWindow.setProgressBar(ratio, { mode: mode || "none" });
+    });
     mainWindow.show();
   });
 
