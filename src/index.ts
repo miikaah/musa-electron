@@ -46,6 +46,7 @@ let musicLibraryPath = "";
 
 const init = async (event: Electron.IpcMainInvokeEvent) => {
   const state = await Fs.getState(stateFile);
+  const electronFileProtocol = "media://";
   musicLibraryPath = state?.musicLibraryPath || "";
   console.log("state", state, "\n");
 
@@ -57,9 +58,9 @@ const init = async (event: Electron.IpcMainInvokeEvent) => {
     return;
   }
 
-  await createApi(musicLibraryPath);
+  await createApi(musicLibraryPath, electronFileProtocol);
   Db.init(musicLibraryPath);
-  await Scanner.init({ musicLibraryPath, isElectron: true, electronFileProtocol: "media://" });
+  await Scanner.init({ musicLibraryPath, isElectron: true, electronFileProtocol });
   event.sender.send("musa:ready");
 
   Scanner.update({ musicLibraryPath, event, scanColor });
@@ -107,6 +108,12 @@ function createWindow() {
 
   protocol.registerFileProtocol("media", (request, callback) => {
     const pathname = decodeURIComponent(request.url.replace("media:/", "").replace("media:\\", ""));
+    const isExternal = pathname.startsWith("/") || new RegExp(/^[A-Z]:\\\w/).test(pathname);
+
+    if (isExternal) {
+      return callback(pathname);
+    }
+
     const filepath = path.join(musicLibraryPath, pathname);
 
     callback(filepath);

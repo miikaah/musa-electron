@@ -9,7 +9,10 @@ export const scanColor = {
 
 let isInit = false;
 
-export const createApi = async (musicLibraryPath: string): Promise<void> => {
+export const createApi = async (
+  musicLibraryPath: string,
+  electronFileProtocol: string
+): Promise<void> => {
   if (isInit) {
     return;
   }
@@ -31,7 +34,7 @@ export const createApi = async (musicLibraryPath: string): Promise<void> => {
   });
 
   ipc.handle("getAudiosByFilepaths", async (_, paths: string[]) => {
-    return Api.getAudiosByFilepaths(paths, musicLibraryPath);
+    return Api.getAudiosByFilepaths(paths, musicLibraryPath, electronFileProtocol);
   });
 
   ipc.handle("getAllThemes", async () => {
