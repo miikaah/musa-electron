@@ -79,6 +79,7 @@ export const createApi = async (
     try {
       await Api.writeTags(musicLibraryPath, id, tags);
     } catch (error) {
+      console.error(error);
       return new Error("FAILED_TO_UPDATE_TAGS");
     }
   });
