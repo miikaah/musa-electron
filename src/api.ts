@@ -55,6 +55,10 @@ export const createApi = async (
     return Api.insertTheme(getThemeId(id, musicLibraryPath), colors);
   });
 
+  ipc.handle("updateTheme", async (_, id, colors) => {
+    return Api.updateTheme(getThemeId(id, musicLibraryPath), colors);
+  });
+
   ipc.handle("removeThemeById", async (_, id) => {
     return Api.removeTheme(id);
   });

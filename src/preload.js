@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld("electron", {
   getAllThemes: () => ipc.invoke("getAllThemes"),
   getThemeById: (id) => ipc.invoke("getThemeById", id),
   insertTheme: (id, colors) => ipc.invoke("insertTheme", id, colors),
+  updateTheme: (id, colors) => ipc.invoke("updateTheme", id, colors),
   removeThemeById: (id) => ipc.invoke("removeThemeById", id),
   getAllGenres: () => ipc.invoke("getAllGenres"),
   find: (query) => ipc.invoke("find", query),
