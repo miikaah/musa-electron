@@ -1,4 +1,5 @@
 import { ipcMain as ipc } from "electron";
+
 import { Api, Scanner, UrlSafeBase64 } from "./";
 
 export const scanColor = {
