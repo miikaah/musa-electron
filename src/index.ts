@@ -86,7 +86,7 @@ function createWindow() {
     x: biggestDisplay.bounds.x,
     y: biggestDisplay.bounds.y,
     width: 1600,
-    height: 980,
+    height: 1050,
     frame: false,
     show: false,
     webPreferences: {
