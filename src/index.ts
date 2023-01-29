@@ -1,8 +1,8 @@
 import { app, BrowserWindow, dialog, ipcMain as ipc, protocol, screen } from "electron";
 import path from "path";
-import { Api, Db, Fs, Scanner } from "./musa-core-import";
 
 import { createApi, scanColor } from "./api";
+import { Api, Db, Fs, Scanner } from "./musa-core-import";
 
 const { NODE_ENV } = process.env;
 const isDev = NODE_ENV === "local";
