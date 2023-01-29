@@ -1,6 +1,6 @@
 import { ipcMain as ipc } from "electron";
 
-import { Api, Scanner, UrlSafeBase64 } from "./";
+import { Api, Scanner, UrlSafeBase64 } from "./musa-core-import";
 
 export const scanColor = {
   INSERT: "#f00",

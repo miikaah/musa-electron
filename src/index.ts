@@ -1,7 +1,6 @@
-import { Api, Db, Fs, Scanner } from "@miikaah/musa-core";
 import { app, BrowserWindow, dialog, ipcMain as ipc, protocol, screen } from "electron";
 import path from "path";
-export * from "@miikaah/musa-core";
+import { Api, Db, Fs, Scanner } from "./musa-core-import";
 
 import { createApi, scanColor } from "./api";
 
