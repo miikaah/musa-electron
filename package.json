@@ -11,7 +11,9 @@
     "test:w": "jest --coverage --watch",
     "build": "shx rm -rf dist && node esbuild.js && shx cp src/preload.js dist/ && shx cp package.json dist/",
     "tsc:w": "tsc --watch --noEmit",
-    "package:mac": "electron-packager ./dist --overwrite --platform=darwin --arch=x64 --icon=assets/icons/musa1024x1024.icns --prune=true --out=release-builds",
+    "package:mac:x64": "electron-packager ./dist --overwrite --platform=darwin --arch=x64 --icon=assets/icons/musa1024x1024.icns --prune=true --out=release-builds",
+    "pack:mac:x64": "env-cmd bash pack.mac.x64.sh",
+    "package:mac": "electron-packager ./dist --overwrite --platform=darwin --arch=arm64 --icon=assets/icons/musa1024x1024.icns --prune=true --out=release-builds",
     "pack:mac": "env-cmd bash pack.mac.sh",
     "package:win": "electron-packager ./dist --overwrite --platform=win32 --arch=x64 --icon=assets/icons/musa1024x1024.ico --prune=true --out=release-builds",
     "pack:win": "env-cmd pack.win.bat"
