@@ -33,24 +33,24 @@
     "@miikaah/musa-core": "9.4.0"
   },
   "devDependencies": {
-    "@types/jest": "^29.4.0",
+    "@types/jest": "^29.5.2",
     "@types/lodash.uniqby": "^4.7.7",
-    "@types/node": "^18.15.0",
+    "@types/node": "^20.2.5",
     "@types/urlsafe-base64": "^1.0.28",
-    "@typescript-eslint/eslint-plugin": "^5.54.1",
-    "@typescript-eslint/parser": "^5.54.1",
-    "electron": "^23.1.3",
+    "@typescript-eslint/eslint-plugin": "^5.59.8",
+    "@typescript-eslint/parser": "^5.59.8",
+    "electron": "^25.0.1",
     "electron-packager": "17.1.1",
     "env-cmd": "^10.1.0",
-    "esbuild": "^0.17.11",
-    "eslint": "^8.36.0",
-    "eslint-config-prettier": "^8.7.0",
+    "esbuild": "^0.17.19",
+    "eslint": "^8.41.0",
+    "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-prettier": "^4.2.1",
-    "nodemon": "2.0.21",
-    "prettier": "^2.8.4",
+    "nodemon": "2.0.22",
+    "prettier": "^2.8.8",
     "prettier-plugin-organize-imports": "^3.2.2",
     "shx": "^0.3.4",
     "ts-node": "^10.9.1",
-    "typescript": "^4.9.5"
+    "typescript": "^5.1.3"
   }
 }
