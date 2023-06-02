@@ -47,8 +47,10 @@ export const createApi = async (
       const theme = await Api.getTheme(getThemeId(id, musicLibraryPath));
 
       return theme;
-    } catch (error) {
-      console.error(error);
+    } catch (error: unknown) {
+      if (!(error as Error).message.includes("Theme Not Found")) {
+        console.error(error);
+      }
     }
   });
 
