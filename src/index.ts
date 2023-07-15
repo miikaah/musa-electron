@@ -77,7 +77,8 @@ function createWindow() {
   if (isDev && allDisplays.length > 1) {
     allDisplays.forEach(
       (display) =>
-        (biggestDisplay = display.size.width > biggestDisplay.size.width ? display : biggestDisplay)
+        (biggestDisplay =
+          display.size.width > biggestDisplay.size.width ? display : biggestDisplay),
     );
   }
   // Create the browser window.

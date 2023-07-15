@@ -12,7 +12,7 @@ let isInit = false;
 
 export const createApi = async (
   musicLibraryPath: string,
-  electronFileProtocol: string
+  electronFileProtocol: string,
 ): Promise<void> => {
   if (isInit) {
     return;
