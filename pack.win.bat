@@ -5,7 +5,7 @@ call npm run build
 
 echo Building Musa frontend...
 cd %FRONTEND_DIR%
-node scripts/buildElectron.mjs
+node scripts/buildDistributable.mjs electron
 
 echo Packaging Musa into an Electron app for Windows...
 cd %BACKEND_DIR%
