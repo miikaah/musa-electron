@@ -6,7 +6,7 @@ npm run build
 echo ""
 echo "Building Musa frontend..."
 cd $FRONTEND_DIR
-node build.electron.js
+node scripts/buildElectron.mjs
 
 echo "Packaging Musa into an Electron app for Mac..."
 cd $BACKEND_DIR
