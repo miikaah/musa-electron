@@ -1,4 +1,11 @@
-import { app, BrowserWindow, dialog, ipcMain as ipc, protocol, screen } from "electron";
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain as ipc,
+  protocol,
+  screen,
+} from "electron";
 import path from "path";
 
 import { createApi, scanColor } from "./api";
@@ -10,7 +17,9 @@ const stateFile = `${isDev ? ".dev" : ""}.musa-electron.state.v1.json`;
 
 // Note: This method can only be used before the ready event of the app module gets emitted
 // and can be called only once.
-protocol.registerSchemesAsPrivileged([{ scheme: "media", privileges: { bypassCSP: true } }]);
+protocol.registerSchemesAsPrivileged([
+  { scheme: "media", privileges: { bypassCSP: true } },
+]);
 
 // This API has to exist so that init works
 ipc.handle("getSettings", async () => {
@@ -59,7 +68,11 @@ const init = async (event: Electron.IpcMainInvokeEvent) => {
 
   await createApi(musicLibraryPath, electronFileProtocol);
   Db.init(musicLibraryPath);
-  await Scanner.init({ musicLibraryPath, isElectron: true, electronFileProtocol });
+  await Scanner.init({
+    musicLibraryPath,
+    isElectron: true,
+    electronFileProtocol,
+  });
   event.sender.send("musa:ready");
 
   Scanner.update({ musicLibraryPath, event, scanColor });
@@ -78,7 +91,9 @@ function createWindow() {
     allDisplays.forEach(
       (display) =>
         (biggestDisplay =
-          display.size.width > biggestDisplay.size.width ? display : biggestDisplay),
+          display.size.width > biggestDisplay.size.width
+            ? display
+            : biggestDisplay),
     );
   }
   // Create the browser window.
@@ -107,8 +122,11 @@ function createWindow() {
   }
 
   protocol.registerFileProtocol("media", (request, callback) => {
-    const pathname = decodeURIComponent(request.url.replace("media:/", "").replace("media:\\", ""));
-    const isExternal = pathname.startsWith("/") || new RegExp(/^[A-Z]:\\\w/).test(pathname);
+    const pathname = decodeURIComponent(
+      request.url.replace("media:/", "").replace("media:\\", ""),
+    );
+    const isExternal =
+      pathname.startsWith("/") || new RegExp(/^[A-Z]:\\\w/).test(pathname);
 
     if (isExternal) {
       return callback(pathname);

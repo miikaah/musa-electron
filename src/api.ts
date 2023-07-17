@@ -35,7 +35,11 @@ export const createApi = async (
   });
 
   ipc.handle("getAudiosByFilepaths", async (_, paths: string[]) => {
-    return Api.getAudiosByFilepaths(paths, musicLibraryPath, electronFileProtocol);
+    return Api.getAudiosByFilepaths(
+      paths,
+      musicLibraryPath,
+      electronFileProtocol,
+    );
   });
 
   ipc.handle("getAllThemes", async () => {
@@ -78,9 +82,12 @@ export const createApi = async (
     return Api.findRandom({ limit: 8 });
   });
 
-  ipc.handle("findRandomWithLockedSearchTerm", async (_, lockedSearchTerm: string) => {
-    return Api.findRandom({ limit: 8, lockedSearchTerm });
-  });
+  ipc.handle(
+    "findRandomWithLockedSearchTerm",
+    async (_, lockedSearchTerm: string) => {
+      return Api.findRandom({ limit: 8, lockedSearchTerm });
+    },
+  );
 
   ipc.handle("writeTags", async (_, id, tags) => {
     try {
@@ -99,7 +106,12 @@ export const createApi = async (
 
     isScanning = true;
 
-    await Scanner.refresh({ musicLibraryPath, isElectron: true, event, scanColor });
+    await Scanner.refresh({
+      musicLibraryPath,
+      isElectron: true,
+      event,
+      scanColor,
+    });
 
     isScanning = false;
   });
