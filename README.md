@@ -13,3 +13,9 @@ Mainly, the `FRONTEND_DIR` and `BACKEND_DIR` environment variables need to be se
 Then you just `npm run pack:<mac|win>` depending on which platform you are on.
 
 On Mac the scripts are known to work in bash and on Windows on the command line.
+
+## Issues
+
+The `protocol.registerFileProtocol` is marked as deprecated but the replacing api does not support seeking streaming data like audio / video.
+
+https://github.com/electron/electron/issues/38749
