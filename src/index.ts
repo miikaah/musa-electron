@@ -22,14 +22,7 @@ const stateFile = `${isDev ? ".dev" : ""}.musa-electron.state.v1.json`;
 protocol.registerSchemesAsPrivileged([
   {
     scheme: "media",
-    privileges: {
-      secure: true,
-      standard: true,
-      bypassCSP: true,
-      supportFetchAPI: true, // Add this if you want to use fetch with this protocol.
-      stream: true, // Add this if you intend to use the protocol for streaming i.e. in video/audio html tags.
-      // corsEnabled: true, // Add this if you need to enable cors for this protocol.
-    },
+    privileges: { bypassCSP: true },
   },
 ]);
 
@@ -133,56 +126,47 @@ function createWindow() {
     mainWindow.webContents.openDevTools();
   }
 
-  // NOTE: https://github.com/electron/electron/issues/38749
   protocol.handle("media", async (req) => {
-    const pathname = decodeURIComponent(
-      req.url
-        .replace("media://", "")
-        .replace("media:\\", "")
-        .replace("abcd/", ""), // HACK: To fix Electron mangling the beginning of the request url
-    );
+    const pathname = decodeURI(new URL(req.url).pathname);
     const isExternal =
-      pathname.startsWith("/") || new RegExp(/^[A-Z]:\\\w/).test(pathname);
-
+      pathname.startsWith("//") || new RegExp(/^[A-Z]:\\\w/).test(pathname);
     // TODO: Check that playing external files works after upgrading Electron
     const filepath = isExternal
       ? pathname
       : path.join(musicLibraryPath, pathname);
-
     const { size } = await stat(filepath);
-
     const headers = new Headers();
-    headers.set("Accept-Ranges", "bytes");
-
-    let status = 200;
-    const rangeText = req.headers.get("range");
-
-    let stream;
-    if (rangeText) {
-      const ranges = parseRangeRequests(rangeText, size);
-
-      const [start, end] = ranges[0];
-      headers.set("Content-Length", `${end - start + 1}`);
-      headers.set("Content-Range", `bytes ${start}-${end}/${size}`);
-      status = 206;
-      stream = fs.createReadStream(filepath, { start, end });
-    } else {
-      headers.set("Content-Length", `${size}`);
-      stream = fs.createReadStream(filepath);
-    }
-
     const ext = path.extname(filepath).replace(".", "");
 
-    if (["jpg", "jpeg", "png", "webp"].includes(ext)) {
+    if (["jpg", "jpeg", "png", "webp"].includes(ext.toLocaleLowerCase())) {
       headers.set("Content-Type", `image/${ext.replace("jpg", "jpeg")}`);
-    } else if (["mp3", "flac", "ogg"].includes(ext)) {
+      headers.set("Content-Length", `${size}`);
+
+      return new Response(new Blob([fs.readFileSync(filepath)]), {
+        headers,
+        status: 200,
+      });
+    } else if (["mp3", "flac", "ogg"].includes(ext.toLocaleLowerCase())) {
       headers.set("Content-Type", `audio/${ext.replace("mp3", "mpeg")}`);
     }
+
+    // NOTE: Instructions how to stream https://github.com/electron/electron/issues/38749
+    const rangeText = req.headers.get("range");
+    if (!rangeText) {
+      return new Response(null, { status: 204 });
+    }
+
+    const [start, end] = parseRangeRequests(rangeText, size)[0];
+    const stream = fs.createReadStream(filepath, { start, end });
+
+    headers.set("Accept-Ranges", "bytes");
+    headers.set("Content-Length", `${end - start + 1}`);
+    headers.set("Content-Range", `bytes ${start}-${end}/${size}`);
 
     // Seems that you can just pass a ReadStream as ReadableStream
     return new Response(stream as unknown as ReadableStream, {
       headers,
-      status,
+      status: 206,
     });
   });
 
