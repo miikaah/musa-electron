@@ -7,6 +7,8 @@ import {
   screen,
 } from "electron";
 import path from "path";
+import { stat } from "fs/promises";
+import fs from "fs";
 
 import { createApi, scanColor } from "./api";
 import { Api, Db, Fs, Scanner } from "./musa-core-import";
@@ -18,7 +20,17 @@ const stateFile = `${isDev ? ".dev" : ""}.musa-electron.state.v1.json`;
 // Note: This method can only be used before the ready event of the app module gets emitted
 // and can be called only once.
 protocol.registerSchemesAsPrivileged([
-  { scheme: "media", privileges: { bypassCSP: true } },
+  {
+    scheme: "media",
+    privileges: {
+      secure: true,
+      standard: true,
+      bypassCSP: true,
+      supportFetchAPI: true, // Add this if you want to use fetch with this protocol.
+      stream: true, // Add this if you intend to use the protocol for streaming i.e. in video/audio html tags.
+      // corsEnabled: true, // Add this if you need to enable cors for this protocol.
+    },
+  },
 ]);
 
 // This API has to exist so that init works
@@ -121,21 +133,106 @@ function createWindow() {
     mainWindow.webContents.openDevTools();
   }
 
-  protocol.registerFileProtocol("media", (request, callback) => {
+  // NOTE: https://github.com/electron/electron/issues/38749
+  protocol.handle("media", async (req) => {
     const pathname = decodeURIComponent(
-      request.url.replace("media:/", "").replace("media:\\", ""),
+      req.url
+        .replace("media://", "")
+        .replace("media:\\", "")
+        .replace("abcd/", ""), // HACK: To fix Electron mangling the beginning of the request url
     );
     const isExternal =
       pathname.startsWith("/") || new RegExp(/^[A-Z]:\\\w/).test(pathname);
 
-    if (isExternal) {
-      return callback(pathname);
+    // TODO: Check that playing external files works after upgrading Electron
+    const filepath = isExternal
+      ? pathname
+      : path.join(musicLibraryPath, pathname);
+
+    const { size } = await stat(filepath);
+
+    const headers = new Headers();
+    headers.set("Accept-Ranges", "bytes");
+
+    let status = 200;
+    const rangeText = req.headers.get("range");
+
+    let stream;
+    if (rangeText) {
+      const ranges = parseRangeRequests(rangeText, size);
+
+      const [start, end] = ranges[0];
+      headers.set("Content-Length", `${end - start + 1}`);
+      headers.set("Content-Range", `bytes ${start}-${end}/${size}`);
+      status = 206;
+      stream = fs.createReadStream(filepath, { start, end });
+    } else {
+      headers.set("Content-Length", `${size}`);
+      stream = fs.createReadStream(filepath);
     }
 
-    const filepath = path.join(musicLibraryPath, pathname);
+    const ext = path.extname(filepath).replace(".", "");
 
-    callback(filepath);
+    if (["jpg", "jpeg", "png", "webp"].includes(ext)) {
+      headers.set("Content-Type", `image/${ext.replace("jpg", "jpeg")}`);
+    } else if (["mp3", "flac", "ogg"].includes(ext)) {
+      headers.set("Content-Type", `audio/${ext.replace("mp3", "mpeg")}`);
+    }
+
+    // Seems that you can just pass a ReadStream as ReadableStream
+    return new Response(stream as unknown as ReadableStream, {
+      headers,
+      status,
+    });
   });
+
+  function parseRangeRequests(text: string, size: number) {
+    const token = text.split("=");
+    if (token.length !== 2 || token[0] !== "bytes") {
+      return [];
+    }
+
+    return token[1]
+      .split(",")
+      .map((v) => parseRange(v, size))
+      .filter(([start, end]) => !isNaN(start) && !isNaN(end) && start <= end);
+  }
+
+  const NAN_ARRAY = [NaN, NaN];
+
+  function parseRange(text: string, size: number) {
+    const token = text.split("-");
+    if (token.length !== 2) {
+      return NAN_ARRAY;
+    }
+
+    const startText = token[0].trim();
+    const endText = token[1].trim();
+
+    if (startText === "") {
+      if (endText === "") {
+        return NAN_ARRAY;
+      } else {
+        let start = size - Number(endText);
+        if (start < 0) {
+          start = 0;
+        }
+
+        return [start, size - 1];
+      }
+    } else {
+      if (endText === "") {
+        return [Number(startText), size - 1];
+      } else {
+        let end = Number(endText);
+        if (end >= size) {
+          end = size - 1;
+        }
+
+        return [Number(startText), end];
+      }
+    }
+  }
 
   // Prevent visual flash of empty frame
   mainWindow.once("ready-to-show", () => {
