@@ -129,10 +129,9 @@ function createWindow() {
   protocol.handle("media", async (req) => {
     const pathname = decodeURI(new URL(req.url).pathname);
     const isExternal =
-      pathname.startsWith("//") || new RegExp(/^[A-Z]:\\\w/).test(pathname);
-    // TODO: Check that playing external files works after upgrading Electron
+      pathname.startsWith("//") || new RegExp(/^\\[A-Z]:\\\w/).test(pathname);
     const filepath = isExternal
-      ? pathname
+      ? pathname.substring(1)
       : path.join(musicLibraryPath, pathname);
     const { size } = await stat(filepath);
     const headers = new Headers();
