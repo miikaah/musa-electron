@@ -74,7 +74,7 @@ export const createApi = async (
     return Api.getAllGenres();
   });
 
-  ipc.handle("find", async (_, query) => {
+  ipc.handle("find", async (_, query: string) => {
     return Api.find({ query, limit: 16 });
   });
 
