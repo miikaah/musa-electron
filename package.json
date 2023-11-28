@@ -9,6 +9,7 @@
     "start": "env-cmd -f .env.local electron scripts/index.js",
     "test": "jest --coverage",
     "test:w": "jest --coverage --watch",
+    "test:e2e": "env-cmd -f .env.e2e playwright test",
     "build": "shx rm -rf dist && node scripts/esbuild.mjs && shx cp src/preload.js dist/ && shx cp package.json dist/",
     "tsc:w": "tsc --watch --noEmit",
     "package:mac:x64": "electron-packager ./dist --overwrite --platform=darwin --arch=x64 --icon=assets/icons/musa1024x1024.icns --prune=true --out=release-builds",
@@ -28,6 +29,7 @@
     "@miikaah/musa-core": "9.4.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.40.0",
     "@types/lodash.uniqby": "^4.7.7",
     "@types/node": "^20.8.2",
     "@types/urlsafe-base64": "^1.0.29",
@@ -41,6 +43,7 @@
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-prettier": "^5.0.0",
     "nodemon": "3.0.1",
+    "playwright": "^1.40.0",
     "prettier": "^3.0.3",
     "prettier-plugin-organize-imports": "^3.2.3",
     "shx": "^0.3.4",

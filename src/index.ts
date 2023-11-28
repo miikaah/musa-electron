@@ -14,8 +14,10 @@ import { createApi, scanColor } from "./api";
 import { Api, Db, Fs, Scanner } from "./musa-core-import";
 
 const { NODE_ENV } = process.env;
+const isTest = NODE_ENV === "test";
 const isDev = NODE_ENV === "local";
-const stateFile = `${isDev ? ".dev" : ""}.musa-electron.state.v1.json`;
+const isDevOrTest = isDev || isTest;
+const stateFile = `${isDevOrTest ? ".dev" : ""}.musa-electron.state.v1.json`;
 
 // Note: This method can only be used before the ready event of the app module gets emitted
 // and can be called only once.
@@ -115,7 +117,7 @@ function createWindow() {
   });
 
   const getURL = () => {
-    return isDev
+    return isDevOrTest
       ? "http://localhost:3666"
       : `file://${path.join(app.getAppPath(), "/build/index.html")}`;
   };

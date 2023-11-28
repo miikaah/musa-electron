@@ -16,6 +16,7 @@ dist*
 .DS_Store
 .env
 .env.local
+.env.e2e
 .env.development.local
 .env.test.local
 .env.production.local
@@ -26,3 +27,6 @@ yarn-error.log*
 
 # Electron
 /release-builds
+
+# Playwright screenshots
+/tests/**/*.png
