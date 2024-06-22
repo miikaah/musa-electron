@@ -32,7 +32,6 @@
     "@playwright/test": "^1.40.0",
     "@types/lodash.uniqby": "^4.7.7",
     "@types/node": "^20.8.2",
-    "@types/urlsafe-base64": "^1.0.29",
     "@typescript-eslint/eslint-plugin": "^6.7.4",
     "@typescript-eslint/parser": "^6.7.4",
     "electron": "^26.2.4",
