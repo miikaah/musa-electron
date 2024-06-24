@@ -28,5 +28,6 @@ yarn-error.log*
 # Electron
 /release-builds
 
-# Playwright screenshots
+# Playwright
 /tests/**/*.png
+/test-results
