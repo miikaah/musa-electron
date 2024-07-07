@@ -10,7 +10,7 @@
     "test": "jest --coverage",
     "test:w": "jest --coverage --watch",
     "test:e2e": "env-cmd -f .env.e2e playwright test",
-    "build": "shx rm -rf dist && node scripts/esbuild.mjs && shx cp src/preload.js dist/ && shx cp package.json dist/",
+    "build": "shx rm -rf dist && node scripts/esbuild.mjs && shx cp src/preload.js dist/ && shx cp package.json dist/ && shx cp -r node_modules/@miikaah/musa-core/lib/bin dist/bin",
     "tsc:w": "tsc --watch --noEmit",
     "package:mac:x64": "electron-packager ./dist --overwrite --platform=darwin --arch=x64 --icon=assets/icons/musa1024x1024.icns --prune=true --out=release-builds",
     "pack:mac:x64": "env-cmd bash scripts/pack.mac.x64.sh",
@@ -26,7 +26,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@miikaah/musa-core": "10.0.1"
+    "@miikaah/musa-core": "10.1.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.44.1",

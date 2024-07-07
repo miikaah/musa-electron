@@ -1,6 +1,6 @@
 import { ipcMain as ipc } from "electron";
 
-import { Api, Scanner, UrlSafeBase64 } from "./musa-core-import";
+import { Api, Normalization, Scanner, UrlSafeBase64 } from "./musa-core-import";
 
 export const scanColor = {
   INSERT: "#f00",
@@ -114,6 +114,10 @@ export const createApi = async (
     });
 
     isScanning = false;
+  });
+
+  ipc.handle("normalizeMany", async (_, units) => {
+    return Normalization.normalizeMany(units);
   });
 
   isInit = true;
