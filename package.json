@@ -36,7 +36,7 @@
     "electron": "26.2.4",
     "electron-packager": "17.1.2",
     "env-cmd": "10.1.0",
-    "esbuild": "0.21.5",
+    "esbuild": "0.23.0",
     "eslint": "9.6.0",
     "eslint-config-prettier": "9.1.0",
     "eslint-plugin-prettier": "5.1.3",
