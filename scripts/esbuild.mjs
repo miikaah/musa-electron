@@ -7,7 +7,7 @@ build({
   bundle: true,
   outdir: "dist",
   platform: "node",
-  target: "es2020",
+  target: "es2022",
   format: "cjs",
   plugins: [
     {
