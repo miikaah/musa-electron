@@ -13,12 +13,12 @@ contextBridge.exposeInMainWorld("electron", {
   getPlatform: () => ipc.invoke("getPlatform"),
   scan: () => ipc.invoke("scan"),
   addScanStartListener: (callback) => {
-    ipc.on("musa:scan:start", (event, scanLength, scanColor) => {
+    ipc.on("musa:scan:start", (_event, scanLength, scanColor) => {
       callback({ scanLength, scanColor });
     });
   },
   addScanUpdateListener: (callback) => {
-    ipc.on("musa:scan:update", (event, scannedLength) => {
+    ipc.on("musa:scan:update", (_event, scannedLength) => {
       callback({ scannedLength });
     });
   },
