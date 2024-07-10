@@ -6,9 +6,9 @@ import {
   protocol,
   screen,
 } from "electron";
-import path from "path";
-import { stat } from "fs/promises";
-import fs from "fs";
+import fs from "node:fs";
+import { stat } from "node:fs/promises";
+import path from "node:path";
 
 import { createApi, scanColor } from "./api";
 import { Api, Db, Fs, Scanner } from "./musa-core-import";

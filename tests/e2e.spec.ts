@@ -1,5 +1,5 @@
+import { expect, test } from "@playwright/test";
 import { ElectronApplication, Page, _electron as electron } from "playwright";
-import { test, expect } from "@playwright/test";
 
 let electronApp: ElectronApplication;
 let window: Page;
