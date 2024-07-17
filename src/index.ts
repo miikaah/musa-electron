@@ -5,13 +5,14 @@ import {
   ipcMain as ipc,
   protocol,
   screen,
+  utilityProcess,
 } from "electron";
 import fs from "node:fs";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 
 import { createApi, scanColor } from "./api";
-import { Api, Db, Fs, Scanner } from "./musa-core-import";
+import { Api, Db, Fs, Normalization, Scanner } from "./musa-core-import";
 
 const { NODE_ENV } = process.env;
 const isTest = NODE_ENV === "test";
@@ -73,13 +74,23 @@ const init = async (event: Electron.IpcMainInvokeEvent) => {
     return;
   }
 
+  Normalization.init(
+    utilityProcess.fork,
+    isDevOrTest
+      ? path.join(__dirname, "../../musa-core/lib/normalization/worker.js")
+      : path.join(app.getAppPath(), "/normalization/worker.js"),
+  );
+
   await createApi(musicLibraryPath, electronFileProtocol);
+
   Db.init(musicLibraryPath);
+
   await Scanner.init({
     musicLibraryPath,
     isElectron: true,
     electronFileProtocol,
   });
+
   event.sender.send("musa:ready");
 
   Scanner.update({ musicLibraryPath, event, scanColor });

@@ -1,6 +1,13 @@
 import { ipcMain as ipc } from "electron";
+import path from "node:path";
 
-import { Api, Normalization, Scanner, UrlSafeBase64 } from "./musa-core-import";
+import {
+  Api,
+  Normalization,
+  NormalizationUnit,
+  Scanner,
+  UrlSafeBase64,
+} from "./musa-core-import";
 
 export const scanColor = {
   INSERT: "#f00",
@@ -116,8 +123,23 @@ export const createApi = async (
     isScanning = false;
   });
 
-  ipc.handle("normalizeMany", async (_, units) => {
-    return Normalization.normalizeMany(units);
+  ipc.handle("normalizeMany", async (_, units: NormalizationUnit[]) => {
+    const result = await Normalization.normalize(
+      units[0].files.map(
+        (file) => `${musicLibraryPath}${decodeURI(new URL(file).pathname)}`,
+      ),
+    );
+
+    return {
+      ...result,
+      files: result.files.map((file) => ({
+        ...file,
+        filepath: path.join(
+          electronFileProtocol,
+          file.filepath.replace(musicLibraryPath, ""),
+        ),
+      })),
+    };
   });
 
   isInit = true;

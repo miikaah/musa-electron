@@ -5,7 +5,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "shx rm -rf dist && node scripts/esbuild.mjs && shx cp src/preload.js dist/ && shx cp package.json dist/ && shx cp -r node_modules/@miikaah/musa-core/lib/bin dist/bin",
+    "build": "shx rm -rf dist && node scripts/esbuild.mjs && shx cp src/preload.js dist/ && shx cp package.json dist/ && npm run copy:normalization",
+    "copy:normalization": "mkdir -p dist/normalization && shx cp -r node_modules/@miikaah/musa-core/lib/bin dist/bin && shx cp node_modules/@miikaah/musa-core/lib/normalization/worker.js dist/normalization/ && shx cp node_modules/@miikaah/musa-core/lib/requireAddon.js dist/",
     "dev": "nodemon --watch ./src --ext ts --exec npm start",
     "package:mac:x64": "electron-packager ./dist --overwrite --platform=darwin --arch=x64 --icon=assets/icons/musa1024x1024.icns --prune=true --out=release-builds",
     "pack:mac:x64": "env-cmd bash scripts/pack.mac.x64.sh",
@@ -26,7 +27,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@miikaah/musa-core": "10.1.1"
+    "@miikaah/musa-core": "10.1.3"
   },
   "devDependencies": {
     "@eslint/js": "9.7.0",
