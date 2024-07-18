@@ -124,22 +124,31 @@ export const createApi = async (
   });
 
   ipc.handle("normalizeMany", async (_, units: NormalizationUnit[]) => {
-    const result = await Normalization.normalize(
-      units[0].files.map(
-        (file) => `${musicLibraryPath}${decodeURI(new URL(file).pathname)}`,
-      ),
-    );
-
-    return {
-      ...result,
-      files: result.files.map((file) => ({
-        ...file,
-        filepath: path.join(
-          electronFileProtocol,
-          file.filepath.replace(musicLibraryPath, ""),
+    const results = await Normalization.normalizeMany(
+      units.map((unit) => ({
+        ...unit,
+        files: unit.files.map(
+          (file) => `${musicLibraryPath}${decodeURI(new URL(file).pathname)}`,
         ),
       })),
-    };
+    );
+
+    return Object.entries(results).reduce(
+      (acc, [id, result]) => ({
+        ...acc,
+        [id]: {
+          ...result,
+          files: result.files.map((file) => ({
+            ...file,
+            filepath: path.join(
+              electronFileProtocol,
+              file.filepath.replace(musicLibraryPath, ""),
+            ),
+          })),
+        },
+      }),
+      {},
+    );
   });
 
   isInit = true;
