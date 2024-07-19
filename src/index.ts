@@ -140,7 +140,7 @@ function createWindow() {
   }
 
   protocol.handle("media", async (req) => {
-    const pathname = decodeURI(new URL(req.url).pathname);
+    const pathname = decodeURIComponent(new URL(req.url).pathname);
     const isExternal =
       pathname.startsWith("//") || new RegExp(/^\\[A-Z]:\\\w/).test(pathname);
     const filepath = isExternal
