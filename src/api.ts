@@ -128,7 +128,8 @@ export const createApi = async (
       units.map((unit) => ({
         ...unit,
         files: unit.files.map(
-          (file) => `${musicLibraryPath}${decodeURI(new URL(file).pathname)}`,
+          (file) =>
+            `${musicLibraryPath}${decodeURIComponent(new URL(file).pathname)}`,
         ),
       })),
     );
