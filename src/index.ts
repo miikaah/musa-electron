@@ -61,39 +61,43 @@ ipc.handle("getArtists", async () => {
 let musicLibraryPath = "";
 
 const init = async (event: Electron.IpcMainInvokeEvent) => {
-  const state = await Fs.getState(stateFile);
-  const electronFileProtocol = "media://";
-  musicLibraryPath = state?.musicLibraryPath || "";
-  console.log("state", state, "\n");
+  try {
+    const state = await Fs.getState(stateFile);
+    const electronFileProtocol = "media://";
+    musicLibraryPath = state?.musicLibraryPath || "";
+    console.log("state", state, "\n");
 
-  if (!musicLibraryPath) {
-    const warning =
-      "No music library path specified. Go to settings and add it to start scanning.\n";
-    console.log(warning);
+    if (!musicLibraryPath) {
+      const warning =
+        "No music library path specified. Go to settings and add it to start scanning.\n";
+      console.log(warning);
 
-    return;
+      return;
+    }
+
+    Normalization.init(
+      utilityProcess.fork,
+      isDevOrTest
+        ? path.join(__dirname, "../../musa-core/lib/normalization/worker.js")
+        : path.join(app.getAppPath(), "/normalization/worker.js"),
+    );
+
+    await createApi(musicLibraryPath, electronFileProtocol);
+
+    Db.init(musicLibraryPath);
+
+    await Scanner.init({
+      musicLibraryPath,
+      isElectron: true,
+      electronFileProtocol,
+    });
+
+    event.sender.send("musa:ready");
+
+    Scanner.update({ musicLibraryPath, event, scanColor });
+  } catch (error) {
+    console.error("Crashed during startup", error);
   }
-
-  Normalization.init(
-    utilityProcess.fork,
-    isDevOrTest
-      ? path.join(__dirname, "../../musa-core/lib/normalization/worker.js")
-      : path.join(app.getAppPath(), "/normalization/worker.js"),
-  );
-
-  await createApi(musicLibraryPath, electronFileProtocol);
-
-  Db.init(musicLibraryPath);
-
-  await Scanner.init({
-    musicLibraryPath,
-    isElectron: true,
-    electronFileProtocol,
-  });
-
-  event.sender.send("musa:ready");
-
-  Scanner.update({ musicLibraryPath, event, scanColor });
 };
 ipc.handle("onInit", init);
 
