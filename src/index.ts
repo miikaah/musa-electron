@@ -5,7 +5,6 @@ import {
   ipcMain as ipc,
   protocol,
   screen,
-  utilityProcess,
 } from "electron";
 import fs from "node:fs";
 import { stat } from "node:fs/promises";
@@ -75,12 +74,7 @@ const init = async (event: Electron.IpcMainInvokeEvent) => {
       return;
     }
 
-    Normalization.init(
-      utilityProcess.fork,
-      isDevOrTest
-        ? path.join(__dirname, "../../musa-core/lib/normalization/worker.js")
-        : path.join(app.getAppPath(), "/normalization/worker.js"),
-    );
+    Normalization.init();
 
     await createApi(musicLibraryPath, electronFileProtocol);
 

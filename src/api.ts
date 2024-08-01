@@ -1,4 +1,4 @@
-import { ipcMain as ipc } from "electron";
+import { app, ipcMain as ipc, utilityProcess } from "electron";
 import path from "node:path";
 
 import {
@@ -6,8 +6,26 @@ import {
   Normalization,
   NormalizationUnit,
   Scanner,
+  Tags,
+  Thread,
   UrlSafeBase64,
 } from "./musa-core-import";
+
+const { NODE_ENV } = process.env;
+const isTest = NODE_ENV === "test";
+const isDev = NODE_ENV === "local";
+const isDevOrTest = isDev || isTest;
+
+const createThreadPoolIfNotExists = () => {
+  if (!Thread.hasThreadPool()) {
+    Thread.createThreadPool(
+      utilityProcess.fork,
+      isDevOrTest
+        ? path.join(__dirname, "../../musa-core/lib/normalization/worker.js")
+        : path.join(app.getAppPath(), "/normalization/worker.js"),
+    );
+  }
+};
 
 export const scanColor = {
   INSERT: "#f00",
@@ -105,6 +123,20 @@ export const createApi = async (
     }
   });
 
+  ipc.handle(
+    "writeTagsMany",
+    async (_, files: { fid: string; tags: Partial<Tags> }[]) => {
+      try {
+        createThreadPoolIfNotExists();
+        await Api.writeTagsMany(musicLibraryPath, files);
+        Thread.destroyThreadPool();
+      } catch (error) {
+        console.error(error);
+        return new Error("FAILED_TO_UPDATE_TAGS");
+      }
+    },
+  );
+
   let isScanning = false;
   ipc.handle("scan", async (event) => {
     if (!musicLibraryPath || isScanning) {
@@ -124,6 +156,7 @@ export const createApi = async (
   });
 
   ipc.handle("normalizeMany", async (_, units: NormalizationUnit[]) => {
+    createThreadPoolIfNotExists();
     const results = await Normalization.normalizeMany(
       units.map((unit) => ({
         ...unit,
@@ -133,6 +166,7 @@ export const createApi = async (
         ),
       })),
     );
+    Thread.destroyThreadPool();
 
     return Object.entries(results).reduce(
       (acc, [id, result]) => ({

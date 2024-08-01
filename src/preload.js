@@ -49,5 +49,6 @@ contextBridge.exposeInMainWorld("electron", {
   findRandomWithLockedSearchTerm: (term) =>
     ipc.invoke("findRandomWithLockedSearchTerm", term),
   writeTags: (id, tags) => ipc.invoke("writeTags", id, tags),
+  writeTagsMany: (files) => ipc.invoke("writeTagsMany", files),
   normalizeMany: (units) => ipc.invoke("normalizeMany", units),
 });
