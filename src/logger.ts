@@ -5,7 +5,9 @@ import config from "./config";
 const log = fs.createWriteStream(
   path.join(
     config.musadir,
-    `${new Date().toISOString().split("T")[0].replaceAll("-", "")}-musa.log`,
+    `${new Date().toISOString().split("T")[0].replaceAll("-", "")}-${
+      config.isDevOrTest ? "dev-" : ""
+    }musa.log`,
   ),
   {
     flags: "a",
@@ -19,8 +21,8 @@ const toLines = (args: any[]) => {
         `[${new Date().toISOString()}] ${
           typeof arg === "object"
             ? JSON.stringify(arg)
-            : arg.startsWith("\n")
-              ? arg.substring(1)
+            : String(arg).startsWith("\n")
+              ? String(arg).substring(1)
               : arg
         }`,
     )

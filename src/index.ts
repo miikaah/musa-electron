@@ -10,16 +10,13 @@ import fs from "node:fs";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 import { createApi, scanColor } from "./api";
+import config from "./config";
 import { initLogger } from "./logger";
 import { Api, Db, Fs, Scanner } from "./musa-core-import";
 
 initLogger();
 
-const { NODE_ENV } = process.env;
-const isTest = NODE_ENV === "test";
-const isDev = NODE_ENV === "local";
-const isDevOrTest = isDev || isTest;
-const stateFile = `${isDevOrTest ? ".dev" : ""}.musa-electron.state.v1.json`;
+const stateFile = `${config.isDevOrTest ? ".dev" : ""}.musa-electron.state.v1.json`;
 
 // Note: This method can only be used before the ready event of the app module gets emitted
 // and can be called only once.
@@ -90,7 +87,7 @@ const init = async (event: Electron.IpcMainInvokeEvent) => {
 
     Scanner.update({ musicLibraryPath, event, scanColor });
   } catch (error) {
-    console.error("Crashed during startup", error);
+    console.error("Crashed during startup", (error as Error)?.message);
   }
 };
 ipc.handle("onInit", init);
@@ -103,7 +100,7 @@ function createWindow() {
   const allDisplays = screen.getAllDisplays();
 
   let biggestDisplay = allDisplays[0];
-  if (isDev && allDisplays.length > 1) {
+  if (config.isDev && allDisplays.length > 1) {
     allDisplays.forEach(
       (display) =>
         (biggestDisplay =
@@ -126,14 +123,14 @@ function createWindow() {
   });
 
   const getURL = () => {
-    return isDevOrTest
+    return config.isDevOrTest
       ? "http://localhost:3666"
       : `file://${path.join(app.getAppPath(), "/build/index.html")}`;
   };
   // and load the index.html of the app.
   mainWindow.loadURL(getURL());
 
-  if (isDev) {
+  if (config.isDev) {
     mainWindow.webContents.openDevTools();
   }
 

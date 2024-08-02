@@ -1,5 +1,6 @@
 import { app, ipcMain as ipc, utilityProcess } from "electron";
 import path from "node:path";
+import config from "./config";
 import {
   Api,
   Normalization,
@@ -10,18 +11,13 @@ import {
   UrlSafeBase64,
 } from "./musa-core-import";
 
-const { NODE_ENV } = process.env;
-const isTest = NODE_ENV === "test";
-const isDev = NODE_ENV === "local";
-const isDevOrTest = isDev || isTest;
-
-const createThreadPoolIfNotExists = () => {
+export const createThreadPoolIfNotExists = () => {
   if (!Thread.hasThreadPool()) {
     Thread.createThreadPool(
       utilityProcess.fork,
-      isDevOrTest
-        ? path.join(__dirname, "../../musa-core/lib/normalization/worker.js")
-        : path.join(app.getAppPath(), "/normalization/worker.js"),
+      config.isDevOrTest
+        ? path.join(__dirname, "../../musa-core/lib/worker.js")
+        : path.join(app.getAppPath(), "/worker.js"),
     );
   }
 };
