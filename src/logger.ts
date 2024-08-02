@@ -15,10 +15,14 @@ const log = fs.createWriteStream(
 );
 
 const toLines = (args: any[]) => {
-  const lines = `${args
+  const startIndex =
+    typeof args[0] === "string" && isValidDate(args[0]) ? 1 : 0;
+
+  const lines = `[${new Date().toISOString()}] ${args
+    .slice(startIndex)
     .map(
       (arg) =>
-        `[${new Date().toISOString()}] ${
+        `${
           typeof arg === "object"
             ? arg instanceof Error
               ? arg.message
@@ -29,7 +33,7 @@ const toLines = (args: any[]) => {
         }`,
     )
     .filter(Boolean)
-    .join("\n")}`;
+    .join(" ")}`;
 
   return lines.startsWith("\n") ? lines : `\n${lines}`;
 };
@@ -53,3 +57,7 @@ export const initLogger = () => {
     log.write(toLines(args));
   };
 };
+
+function isValidDate(dateString: string) {
+  return !isNaN(new Date(dateString).getTime());
+}
