@@ -1,6 +1,5 @@
 import { app, ipcMain as ipc, utilityProcess } from "electron";
 import path from "node:path";
-
 import {
   Api,
   Normalization,
@@ -118,8 +117,9 @@ export const createApi = async (
     try {
       await Api.writeTags(musicLibraryPath, id, tags);
     } catch (error) {
-      console.error(error);
-      return new Error("FAILED_TO_UPDATE_TAGS");
+      const message = (error as Error)?.message ?? "";
+      console.error(message);
+      return new Error(message);
     }
   });
 
@@ -129,10 +129,12 @@ export const createApi = async (
       try {
         createThreadPoolIfNotExists();
         await Api.writeTagsMany(musicLibraryPath, files);
-        Thread.destroyThreadPool();
       } catch (error) {
-        console.error(error);
-        return new Error("FAILED_TO_UPDATE_TAGS");
+        const message = (error as Error)?.message ?? "";
+        console.error(message);
+        return new Error(message);
+      } finally {
+        Thread.destroyThreadPool();
       }
     },
   );

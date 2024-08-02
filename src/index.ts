@@ -9,9 +9,11 @@ import {
 import fs from "node:fs";
 import { stat } from "node:fs/promises";
 import path from "node:path";
-
 import { createApi, scanColor } from "./api";
-import { Api, Db, Fs, Normalization, Scanner } from "./musa-core-import";
+import { initLogger } from "./logger";
+import { Api, Db, Fs, Scanner } from "./musa-core-import";
+
+initLogger();
 
 const { NODE_ENV } = process.env;
 const isTest = NODE_ENV === "test";
@@ -69,12 +71,10 @@ const init = async (event: Electron.IpcMainInvokeEvent) => {
     if (!musicLibraryPath) {
       const warning =
         "No music library path specified. Go to settings and add it to start scanning.\n";
-      console.log(warning);
+      console.warn(warning);
 
       return;
     }
-
-    Normalization.init();
 
     await createApi(musicLibraryPath, electronFileProtocol);
 
