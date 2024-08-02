@@ -20,7 +20,9 @@ const toLines = (args: any[]) => {
       (arg) =>
         `[${new Date().toISOString()}] ${
           typeof arg === "object"
-            ? JSON.stringify(arg)
+            ? arg instanceof Error
+              ? arg.message
+              : JSON.stringify(arg)
             : String(arg).startsWith("\n")
               ? String(arg).substring(1)
               : arg
