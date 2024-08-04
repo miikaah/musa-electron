@@ -5,9 +5,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "shx rm -rf dist && node scripts/esbuild.mjs && npm run build:worker && shx cp src/preload.js dist/ && shx cp package.json dist/ && npm run copy:normalization",
-    "build:worker": "shx cp node_modules/@miikaah/musa-core/lib/worker.js dist/",
-    "copy:normalization": "shx mkdir -p dist/normalization && shx cp -r node_modules/@miikaah/musa-core/lib/bin dist/bin",
+    "build": "shx rm -rf dist && node scripts/esbuild.mjs && npm run copy:worker && shx cp src/preload.js dist/ && shx cp package.json dist/ && npm run copy:bin",
+    "copy:worker": "shx cp node_modules/@miikaah/musa-core/lib/worker.js dist/",
+    "copy:bin": "shx cp -r node_modules/@miikaah/musa-core/lib/bin dist/bin",
     "dev": "nodemon --watch ./src --ext ts --exec npm start",
     "package:mac:x64": "electron-packager ./dist --overwrite --platform=darwin --arch=x64 --icon=assets/icons/musa1024x1024.icns --prune=true --out=release-builds",
     "pack:mac:x64": "env-cmd bash scripts/pack.mac.x64.sh",
