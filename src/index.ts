@@ -131,7 +131,7 @@ function createWindow() {
   mainWindow.loadURL(getURL());
 
   if (config.isDev) {
-    mainWindow.webContents.openDevTools();
+    mainWindow.webContents.openDevTools({ mode: "right" });
   }
 
   protocol.handle("media", async (req) => {
