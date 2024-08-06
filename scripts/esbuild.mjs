@@ -2,7 +2,7 @@ import { build } from "esbuild";
 
 const start = Date.now();
 
-build({
+void build({
   entryPoints: ["src/index.ts"],
   bundle: true,
   outdir: "dist",
