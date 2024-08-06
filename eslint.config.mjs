@@ -1,13 +1,13 @@
 // @ts-check
 import eslint from "@eslint/js";
-import tseslint from "typescript-eslint";
 import eslintConfigPrettier from "eslint-config-prettier";
 import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended";
 import globals from "globals";
+import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   eslint.configs.recommended,
-  ...tseslint.configs.recommended,
+  ...tseslint.configs.recommendedTypeChecked,
   eslintConfigPrettier,
   eslintPluginPrettierRecommended,
   {
@@ -25,10 +25,15 @@ export default tseslint.config(
       globals: {
         ...globals.node,
       },
+      parserOptions: {
+        project: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
     rules: {
       "prettier/prettier": 1,
       "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unsafe-argument": "off",
     },
   },
   {

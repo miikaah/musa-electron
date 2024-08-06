@@ -12,7 +12,7 @@ import path from "node:path";
 import { createApi, scanColor } from "./api";
 import config from "./config";
 import { initLogger } from "./logger";
-import { Api, Db, Fs, Scanner } from "./musa-core-import";
+import { Api, Db, Fs, Scanner, State } from "./musa-core-import";
 
 initLogger();
 
@@ -32,7 +32,7 @@ ipc.handle("getSettings", async () => {
   return Fs.getState(stateFile);
 });
 
-ipc.handle("insertSettings", async (_, settings) => {
+ipc.handle("insertSettings", async (_, settings: State) => {
   return Fs.setState(stateFile, settings);
 });
 
@@ -73,9 +73,9 @@ const init = async (event: Electron.IpcMainInvokeEvent) => {
       return;
     }
 
-    await createApi(musicLibraryPath, electronFileProtocol);
+    createApi(musicLibraryPath, electronFileProtocol);
 
-    Db.init(musicLibraryPath);
+    await Db.init(musicLibraryPath);
 
     await Scanner.init({
       musicLibraryPath,
@@ -85,7 +85,7 @@ const init = async (event: Electron.IpcMainInvokeEvent) => {
 
     event.sender.send("musa:ready");
 
-    Scanner.update({ musicLibraryPath, event, scanColor });
+    await Scanner.update({ musicLibraryPath, event, scanColor });
   } catch (error) {
     console.error("Crashed during startup", (error as Error)?.message);
   }
@@ -109,7 +109,7 @@ function createWindow() {
             : biggestDisplay),
     );
   }
-  // Create the browser window.
+  // Create the browser window
   mainWindow = new BrowserWindow({
     x: biggestDisplay.bounds.x,
     y: biggestDisplay.bounds.y,
@@ -128,7 +128,7 @@ function createWindow() {
       : `file://${path.join(app.getAppPath(), "/build/index.html")}`;
   };
   // and load the index.html of the app.
-  mainWindow.loadURL(getURL());
+  void mainWindow.loadURL(getURL()); // Needs to be void Promise or the window won't open for whatever reason
 
   if (config.isDev) {
     mainWindow.webContents.openDevTools({ mode: "right" });
@@ -163,18 +163,32 @@ function createWindow() {
       return new Response(null, { status: 204 });
     }
 
-    const [start, end] = parseRangeRequests(rangeText, size)[0];
-    const stream = fs.createReadStream(filepath, { start, end });
+    let parsedRangeRequest;
+    try {
+      // There is a non-deterministic bug here where parsedRangeRequest becomes non-iterable
+      parsedRangeRequest = parseRangeRequests(rangeText, size)[0];
+      const [start, end] = parsedRangeRequest;
+      const stream = fs.createReadStream(filepath, { start, end });
 
-    headers.set("Accept-Ranges", "bytes");
-    headers.set("Content-Length", `${end - start + 1}`);
-    headers.set("Content-Range", `bytes ${start}-${end}/${size}`);
+      headers.set("Accept-Ranges", "bytes");
+      headers.set("Content-Length", `${end - start + 1}`);
+      headers.set("Content-Range", `bytes ${start}-${end}/${size}`);
 
-    // Seems that you can just pass a ReadStream as ReadableStream
-    return new Response(stream as unknown as ReadableStream, {
-      headers,
-      status: 206,
-    });
+      // Seems that you can just pass a ReadStream as ReadableStream
+      return new Response(stream as unknown as ReadableStream, {
+        headers,
+        status: 206,
+      });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "No message";
+      const message = `Failed during Partial Content range request ${msg}`;
+      console.error(message);
+      console.log("parsedRangeRequest", parsedRangeRequest);
+      return new Response(JSON.stringify({ message }), {
+        headers,
+        status: 500,
+      });
+    }
   });
 
   function parseRangeRequests(text: string, size: number) {
@@ -249,16 +263,20 @@ function createWindow() {
 // Enable sandbox for all renderers
 app.enableSandbox();
 
-app.whenReady().then(async () => {
-  createWindow();
-
-  app.on("activate", () => {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
+app
+  .whenReady()
+  .then(createWindow)
+  .catch((error) => {
+    console.error("Failed in whenReady", error);
+    process.exit(1);
   });
+
+app.on("activate", () => {
+  // On macOS it's common to re-create a window in the app when the
+  // dock icon is clicked and there are no other windows open.
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
 });
 
 // Quit when all windows are closed.
@@ -271,26 +289,26 @@ app.on("window-all-closed", function () {
 });
 
 // Api for window min max close
-ipc.handle("minimizeWindow", async () => {
+ipc.handle("minimizeWindow", () => {
   mainWindow.minimize();
 });
 
-ipc.handle("maximizeWindow", async () => {
+ipc.handle("maximizeWindow", () => {
   mainWindow.maximize();
 });
 
-ipc.handle("unmaximizeWindow", async () => {
+ipc.handle("unmaximizeWindow", () => {
   mainWindow.unmaximize();
 });
 
-ipc.handle("isWindowMaximized", async () => {
+ipc.handle("isWindowMaximized", () => {
   return mainWindow.isMaximized();
 });
 
-ipc.handle("closeWindow", async () => {
+ipc.handle("closeWindow", () => {
   mainWindow.close();
 });
 
-ipc.handle("getPlatform", async () => {
+ipc.handle("getPlatform", () => {
   return process.platform;
 });

@@ -14,7 +14,7 @@ import {
 export const createThreadPoolIfNotExists = () => {
   if (!Thread.hasThreadPool()) {
     Thread.createThreadPool(
-      utilityProcess.fork,
+      utilityProcess.fork.bind(null),
       config.isDevOrTest
         ? path.join(__dirname, "../../musa-core/lib/worker.js")
         : path.join(app.getAppPath(), "/worker.js"),
@@ -30,10 +30,10 @@ export const scanColor = {
 
 let isInit = false;
 
-export const createApi = async (
+export const createApi = (
   musicLibraryPath: string,
   electronFileProtocol: string,
-): Promise<void> => {
+): void => {
   if (isInit) {
     return;
   }
@@ -50,7 +50,7 @@ export const createApi = async (
     return Api.getAlbumById(id);
   });
 
-  ipc.handle("getAudioById", async (_, id) => {
+  ipc.handle("getAudioById", async (_, id: string) => {
     return Api.getAudioById({ id });
   });
 
