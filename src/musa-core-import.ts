@@ -1,2 +1,2 @@
-// export * from "../../musa-core/lib";
+// export * from "../../musa-core/src";
 export * from "@miikaah/musa-core";

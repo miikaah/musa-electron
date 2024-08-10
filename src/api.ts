@@ -47,11 +47,11 @@ export const createApi = (
   });
 
   ipc.handle("getAlbumById", async (_, id) => {
-    return Api.getAlbumById(id);
+    return Api.findAlbumById(id);
   });
 
   ipc.handle("getAudioById", async (_, id: string) => {
-    return Api.getAudioById({ id });
+    return Api.findAudioById({ id });
   });
 
   ipc.handle("getAudiosByFilepaths", async (_, paths: string[]) => {
