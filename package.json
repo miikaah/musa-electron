@@ -13,6 +13,8 @@
     "pack:mac:x64": "env-cmd bash scripts/pack.mac.x64.sh",
     "package:mac": "shx rm -rf release-builds && electron-packager ./dist --overwrite --platform=darwin --arch=arm64 --icon=assets/icons/musa1024x1024.icns --prune=true --out=release-builds",
     "pack:mac": "env-cmd bash scripts/pack.mac.sh",
+    "package:nux": "shx rm -rf release-builds && electron-packager ./dist --overwrite --platform=linux --arch=x64 --icon=assets/icons/musa1024x1024.icns --prune=true --out=release-builds",
+    "pack:nux": "env-cmd bash scripts/pack.nux.sh",
     "package:win": "electron-packager ./dist --overwrite --platform=win32 --arch=x64 --icon=assets/icons/musa1024x1024.ico --prune=true --out=release-builds",
     "pack:win": "env-cmd scripts/pack.win.bat",
     "start": "env-cmd -f .env.local electron scripts/index.js",
@@ -28,7 +30,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@miikaah/musa-core": "10.5.3"
+    "@miikaah/musa-core": "10.5.5"
   },
   "devDependencies": {
     "@eslint/js": "9.12.0",

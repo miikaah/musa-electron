@@ -29,6 +29,7 @@ protocol.registerSchemesAsPrivileged([
 
 // This API has to exist so that init works
 ipc.handle("getSettings", async () => {
+  await Fs.checkMusadirExists();
   return Fs.getState(stateFile);
 });
 
