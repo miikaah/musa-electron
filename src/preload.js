@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer: ipc } = require("electron");
+const { contextBridge, ipcRenderer: ipc, webUtils } = require("electron");
 
 contextBridge.exposeInMainWorld("electron", {
   onInit: () => ipc.invoke("onInit"),
@@ -37,7 +37,13 @@ contextBridge.exposeInMainWorld("electron", {
   getArtistAlbums: (id) => ipc.invoke("getArtistAlbums", id),
   getAlbumById: (id) => ipc.invoke("getAlbumById", id),
   getAudioById: (id) => ipc.invoke("getAudioById", id),
-  getAudiosByFilepaths: (paths) => ipc.invoke("getAudiosByFilepaths", paths),
+  getAudiosByFilepaths: (files) => {
+    const paths = [];
+    for (let i = 0; i < Object.keys(files).length; i++) {
+      paths.push(webUtils.getPathForFile(files[i]));
+    }
+    return ipc.invoke("getAudiosByFilepaths", paths);
+  },
   getAllThemes: () => ipc.invoke("getAllThemes"),
   getThemeById: (id) => ipc.invoke("getThemeById", id),
   insertTheme: (id, colors) => ipc.invoke("insertTheme", id, colors),

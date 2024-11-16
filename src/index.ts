@@ -138,15 +138,20 @@ function createWindow() {
 
   protocol.handle("media", async (req) => {
     const pathname = decodeURIComponent(new URL(req.url).pathname);
+    console.log("pathname", pathname);
     const isExternal =
-      pathname.startsWith("//") || new RegExp(/^\\[A-Z]:\\\w/).test(pathname);
+      pathname.startsWith("//") ||
+      // pathname.startsWith("/") ||
+      new RegExp(/^\\[A-Z]:\\\w/).test(pathname);
     const filepath = isExternal
-      ? pathname.substring(1)
+      ? process.platform === "linux"
+        ? pathname
+        : pathname.substring(1)
       : path.join(musicLibraryPath, pathname);
-    const { size } = await stat(filepath);
-    const headers = new Headers();
+    const size = (await stat(filepath)).size;
     const ext = path.extname(filepath).replace(".", "");
 
+    const headers = new Headers();
     if (["jpg", "jpeg", "png", "webp"].includes(ext.toLocaleLowerCase())) {
       headers.set("Content-Type", `image/${ext.replace("jpg", "jpeg")}`);
       headers.set("Content-Length", `${size}`);
