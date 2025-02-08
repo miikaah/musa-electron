@@ -37,7 +37,7 @@
     "@miikaah/eslint-config-musa": "0.1.6",
     "@playwright/test": "1.49.1",
     "@types/eslint__js": "8.42.3",
-    "@types/node": "22.13.0",
+    "@types/node": "22.13.1",
     "electron": "33.2.1",
     "electron-packager": "17.1.2",
     "env-cmd": "10.1.0",
