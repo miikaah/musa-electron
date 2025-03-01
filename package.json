@@ -38,7 +38,7 @@
     "@playwright/test": "1.49.1",
     "@types/eslint__js": "8.42.3",
     "@types/node": "22.13.7",
-    "electron": "33.4.1",
+    "electron": "33.4.2",
     "electron-packager": "17.1.2",
     "env-cmd": "10.1.0",
     "esbuild": "0.25.0",
