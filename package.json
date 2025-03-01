@@ -47,7 +47,7 @@
     "eslint-plugin-prettier": "5.2.3",
     "nodemon": "3.1.9",
     "playwright": "1.49.1",
-    "prettier": "3.5.1",
+    "prettier": "3.5.2",
     "prettier-plugin-organize-imports": "4.1.0",
     "shx": "0.3.4",
     "ts-node": "10.9.2",
